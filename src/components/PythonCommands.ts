@@ -2,7 +2,7 @@ import { PythonShell, Options} from "python-shell"
 
 let pyshell: PythonShell;
 
-function searchPython(query : string) {
+function searchPython(query : string): PythonShell {
   const pp = {"command": "search", 
   "data": {
     "query": query
@@ -13,11 +13,13 @@ function searchPython(query : string) {
   };
   pyshell = new PythonShell('./tryout.py', options);
 
-  pyshell.on('message', function (message) {
-    // received a message sent from the Python script (a simple "print" statement)
-    console.log(message);
-    pyshell.send({"confirmed": 1})
-  });
+//   pyshell.on('message', function (message) {
+//     // received a message sent from the Python script (a simple "print" statement)
+//     console.log(message);
+//     pyshell.send({"confirmed": 1})
+//   });
+
+  return pyshell;
 
 }
 
@@ -26,7 +28,7 @@ function sendCommand() {
 }
 
 function quitCommand() {
-  pyshell.send({"quit": 0})
+  pyshell.kill()
 }
 
 export { searchPython, sendCommand, quitCommand }

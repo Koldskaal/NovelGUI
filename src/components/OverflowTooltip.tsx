@@ -12,7 +12,6 @@ export const OverflowTooltip = ({message, colSpan}: TooltipProp) => {
     const compareSize = () => {
       const compare =
         textElementRef.current.scrollWidth > textElementRef.current.clientWidth;
-      console.log("compare: ", compare);
       setHover(compare);
     };
   

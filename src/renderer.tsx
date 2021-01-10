@@ -1,17 +1,15 @@
 import "./index.css";
 import React from "react";
 import ReactDOM from "react-dom";
-import { Divider, Input, Center, Box, Button, extendTheme, ChakraProvider } from "@chakra-ui/react";
+import { Divider, Input, Center, Box, Button, extendTheme, ChakraProvider, VStack } from "@chakra-ui/react";
 import {NovelCard, SearchField} from "./components"
 import {quitCommand} from "./components/PythonCommands"
 
 
 
 const Root = () => (
-  <div>
+  <VStack paddingLeft="20px" paddingRight="20px">
     <SearchField />
-    <Box height="20px">
-    </Box>
       <NovelCard 
         title = {"Test"}
         source = {"URL example.com aaaaaaaaaaaaand it is realy looooooooooooooooooooooooooooong"}
@@ -22,12 +20,7 @@ const Root = () => (
         source = {"URL example.com aaaaaaaaaaaaand it is realy looooooooooooooooooooooooooooong"}
         chapters = {12}
       />
-      <Button onClick={quitCommand}>
-        Cancel
-      </Button>
-
-      
-  </div>
+  </VStack>
 );
 
 
@@ -40,7 +33,7 @@ const config = {
 
 ReactDOM.render(
   <ChakraProvider theme={customTheme}>
-    <Root />
+      <Root />
   </ChakraProvider>,
   document.getElementById("root")
 );

@@ -14,14 +14,19 @@ import {
   DrawerContent,
   DrawerCloseButton,
   useDisclosure,
-  Grid
+  Grid, Slide, Box
 } from "@chakra-ui/react";
 import { PythonShell } from "python-shell";
 import React, { Fragment, useEffect, useState } from "react";
+import { NovelResult} from "./ResultBox"
 
 import { searchPython, quitCommand } from "./PythonCommands";
 
-export const SearchField = () => {
+type SearchProp = {
+  onDataChange: (results: NovelResult[]) => void;
+}
+
+export const SearchField = ({onDataChange}: SearchProp) => {
   const [value, setValue] = useState("");
 
   const handleChange = (event: any) => setValue(event.target.value);
@@ -31,16 +36,16 @@ export const SearchField = () => {
 
     const pyshell: PythonShell = searchPython(value);
     pyshell.on("message", function (message) {
-      if (message["status"] != "ONGOING") {
+      if (message.status != "ONGOING") {
         onClose();
         return;
       }
       onOpen();
-      setMax(message["max"]);
-      setProgress(message["current"]);
-      setPct((message["current"] / message["max"]) * 100);
-      if (message["novels"]) {
-        setData(message["novels"]);
+      setMax(message.max);
+      setProgress(message.current);
+      setPct((message.current / message.max) * 100);
+      if (message.novels) {
+        setData(message.novels);
       }
       pyshell.send({ confirmed: 1 });
     });
@@ -56,7 +61,7 @@ export const SearchField = () => {
     event.preventDefault();
   };
 
-  const [data, setData] = useState({});
+  const [data, setData] = useState([]);
   const [pct, setPct] = useState(0);
   const [progress, setProgress] = useState(0);
   const [max, setMax] = useState(0);
@@ -64,8 +69,8 @@ export const SearchField = () => {
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   useEffect(() => {
-    console.log(data);
-  }, [data]);
+    onDataChange(data as NovelResult[]);
+  }, [data, onDataChange]);
 
 
   return (
@@ -73,20 +78,28 @@ export const SearchField = () => {
         <form onSubmit={formSubmit} className={"searchBar"}>
           <HStack spacing="10px" paddingTop="20px" paddingBottom="20px" minWidth="100%">
             <Input placeholder="Basic usage" onChange={handleChange} />
-            <Button onClick={handleClick}>Search</Button>
+            <Button onClick={handleClick} colorScheme="green">Search</Button>
           </HStack>
         </form>
-        <Drawer placement="bottom" onClose={onClose} isOpen={isOpen} closeOnOverlayClick={false}>
-        {/* <DrawerOverlay> */}
+        <Slide direction="bottom" in={isOpen}>
+          <Box p="40px" bg="teal.500" color="white"
+          mt="1"
+          rounded="md"
+          shadow="md">
+        <Button onClick={handleCancel} >close</Button>
+        <div><Progress value={pct} size="xs" /></div>
+        </Box>
+        </Slide>
+{/* 
+        <Drawer placement="bottom" onClose={onClose} isOpen={isOpen} closeOnOverlayClick={false} blockScrollOnMount={false} scrollBehavior="outside">
           <DrawerContent>
             <DrawerHeader borderBottomWidth="1px">Searching sites: {progress}/{max}</DrawerHeader>
-            <DrawerCloseButton onClick={handleCancel} />
+            
             <DrawerBody>
             <div><Progress value={pct} size="xs" /></div>
             </DrawerBody>
           </DrawerContent>
-        {/* </DrawerOverlay> */}
-      </Drawer>
+      </Drawer> */}
     </Fragment>
   );
 };

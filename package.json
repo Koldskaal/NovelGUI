@@ -86,6 +86,7 @@
   },
   "dependencies": {
     "@babel/preset-react": "^7.12.10",
+    "@chakra-ui/icons": "^1.0.3",
     "@chakra-ui/react": "^1.1.2",
     "@emotion/react": "^11.1.4",
     "@emotion/styled": "^11.0.0",
@@ -95,6 +96,7 @@
     "framer-motion": "^3.1.4",
     "python-shell": "^2.0.3",
     "react": "^17.0.1",
-    "react-dom": "^17.0.1"
+    "react-dom": "^17.0.1",
+    "react-scrollbars-custom": "^4.0.25"
   }
 }

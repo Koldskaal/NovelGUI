@@ -1,5 +1,5 @@
 import "./index.css";
-import React,{useState} from "react";
+import React,{useEffect, useState} from "react";
 import ReactDOM from "react-dom";
 import {
   Divider,
@@ -13,19 +13,30 @@ import {
   Text
 } from "@chakra-ui/react";
 import { NovelCard, SearchField } from "./components";
-import { NovelResult, ResultBox } from "./components/ResultBox"
-import { quitCommand } from "./components/PythonCommands";
+import { NovelResult, ResultBox, ResultBoxState } from "./components/ResultBox"
 
 const Root = () => {
   const [currentData, setData] = useState([] as NovelResult[])
+  const [ongoing, setOngoing] = useState(false)
+  const [resultState, setResultState] = useState(ResultBoxState.SelectNovel)
+
   const updateData = (results: NovelResult[]) => {
+    if (!ongoing) {
+      setOngoing(true);
+    }
     setData(results);
   }
 
+  useEffect(() => {
+    if (ongoing) {
+      setResultState(ResultBoxState.SelectNovel);
+    }
+  },[ongoing])
+
   return (
     <VStack paddingLeft="20px" paddingRight="20px">
-      <SearchField onDataChange={updateData} />
-      <ResultBox results={currentData}/>
+      <SearchField onDataChange={updateData} onSearchEnd={() => setOngoing(false)} />
+      <ResultBox results={currentData} state={resultState}/>
     </VStack>
   );
 };

@@ -20,22 +20,22 @@ import { PythonShell } from "python-shell";
 import React, { Fragment, useEffect, useState } from "react";
 import { NovelResult} from "./ResultBox"
 
-import { searchPython, quitCommand } from "./PythonCommands";
+import { searchPython, PythonTask } from "./PythonCommands";
 
 type SearchProp = {
   onDataChange: (results: NovelResult[]) => void;
+  onSearchEnd: () => void;
 }
 
-export const SearchField = ({onDataChange}: SearchProp) => {
+export const SearchField = ({onDataChange, onSearchEnd}: SearchProp) => {
   const [value, setValue] = useState("");
-
+  const [task, setTask] = useState<PythonTask>();
   const handleChange = (event: any) => setValue(event.target.value);
 
   const handleClick = () => {
     setProgress(0)
-
-    const pyshell: PythonShell = searchPython(value);
-    pyshell.on("message", function (message) {
+    const task = searchPython(value);
+    task.subscribeToMessage((message:any) => {
       if (message.status != "ONGOING") {
         onClose();
         return;
@@ -47,13 +47,18 @@ export const SearchField = ({onDataChange}: SearchProp) => {
       if (message.novels) {
         setData(message.novels);
       }
-      pyshell.send({ confirmed: 1 });
-    });
+      task.send({ confirmed: 1 });
+    })
+
+    task.subscribeToEnd(onSearchEnd);
+    
+    setTask(task);
   };
 
   const handleCancel = () => {
     onClose();
-    quitCommand();
+    task.cancel();
+    onSearchEnd();
   };
 
   const formSubmit = (event: any) => {

@@ -1,11 +1,4 @@
-import { SelectFieldProps } from "@chakra-ui/react";
 import { PythonShell, Options } from "python-shell";
-
-interface Message {
-  status: string;
-  progress: number;
-  payload: any;
-}
 class PythonTask {
   pyshell: PythonShell;
 
@@ -19,6 +12,10 @@ class PythonTask {
     this.command = command;
     this.queueKey = queueKey;
     taskManager.addToQueue(this.queueKey, this);
+  }
+
+  getCommand(): string {
+    return this.command;
   }
 
   beginTask(): void {
@@ -81,16 +78,23 @@ function removeItem(arr: any[], value: any) {
   return arr;
 }
 
+const maxRunning = 3;
+
 class TaskManager {
   allQueues: { [id: string]: PythonTask[] } = {};
-  subscribers: { (task: PythonTask): void }[] = []
+  subscribers: { (task: PythonTask): void }[] = [];
+
+  runningQueue: { [id: string]: PythonTask[] } = {};
 
   addToQueue(queueId: string, task: PythonTask) {
     if (!this.allQueues[queueId]) {
       this.allQueues[queueId] = [] as PythonTask[];
+      this.runningQueue[queueId] = [] as PythonTask[];
     }
 
     this.allQueues[queueId].push(task);
+    this.startNextInQueue();
+    this.noticeSubscribers(task);
   }
 
   removeFromQueue(queueId: string, task: PythonTask) {
@@ -100,30 +104,49 @@ class TaskManager {
   }
 
   subscribeToAnyTaskStart(listener: (task: PythonTask) => void) {
-    this.subscribers.push(listener)
+    this.subscribers.push(listener);
   }
 
   unsubscribeToAnyTaskStart(listener: (task: PythonTask) => void) {
     this.subscribers = removeItem(this.subscribers, listener);
+  }
+
+  startNextInQueue() {
+    for (const id in this.allQueues) {
+      if (this.runningQueue[id].length >= maxRunning) continue;
+      if (this.allQueues[id].length > 0) {
+        const task = this.allQueues[id].shift();
+        task.beginTask();
+        this.runningQueue[id].push(task);
+        
+
+        task.subscribeToEnd(() => {
+          this.runningQueue[id] = removeItem(this.runningQueue[id], task);
+          this.startNextInQueue();
+        });
+      }
+    }
+  }
+
+  private noticeSubscribers(task: PythonTask) {
+    this.subscribers.map((listener) => {
+      listener(task);
+    })
   }
 }
 
 const taskManager = new TaskManager();
 
 function searchPython(query: string): PythonTask {
-  const pp = {
+  const command = {
     command: "search",
     data: {
       query: query,
     },
   };
-  const options: Options = {
-    mode: "json",
-    args: [JSON.stringify(pp)],
-  };
-  const task = new PythonTask(JSON.stringify(pp), "search");
-  task.beginTask();
+
+  const task = new PythonTask(JSON.stringify(command), "search");
   return task;
 }
 
-export { searchPython, PythonTask };
+export { searchPython, PythonTask, taskManager };

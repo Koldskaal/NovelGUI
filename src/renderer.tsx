@@ -10,33 +10,28 @@ import {
   extendTheme,
   ChakraProvider,
   VStack,
-  Text
+  Text,
+  Spacer
 } from "@chakra-ui/react";
 import { NovelCard, SearchField } from "./components";
 import { NovelResult, ResultBox, ResultBoxState } from "./components/ResultBox"
+import {BottomIconBar, TaskManager} from "./components/TaskManager"
+import { Fonts } from "./fonts"
 
 const Root = () => {
   const [currentData, setData] = useState([] as NovelResult[])
-  const [ongoing, setOngoing] = useState(false)
   const [resultState, setResultState] = useState(ResultBoxState.SelectNovel)
 
   const updateData = (results: NovelResult[]) => {
-    if (!ongoing) {
-      setOngoing(true);
-    }
     setData(results);
   }
 
-  useEffect(() => {
-    if (ongoing) {
-      setResultState(ResultBoxState.SelectNovel);
-    }
-  },[ongoing])
 
   return (
     <VStack paddingLeft="20px" paddingRight="20px">
-      <SearchField onDataChange={updateData} onSearchEnd={() => setOngoing(false)} />
+      <SearchField onDataChange={updateData} onSearchStart={() => setResultState(ResultBoxState.SelectNovel)} />
       <ResultBox results={currentData} state={resultState}/>
+      <BottomIconBar />
     </VStack>
   );
 };
@@ -56,6 +51,10 @@ const customTheme = extendTheme({
   selected: {
     bg: "gray.900",
     color: "white"
+  },
+  fonts: {
+    heading: "Open Sans",
+    body: "Raleway",
   }
 } });
 

@@ -133,7 +133,7 @@ export const ResultBox = (prop: {
       >
         <Table variant="simple" display="flex">
           <Tbody
-            h="calc(((100vh - 1.5rem) - 64px) - 60px)"
+            h="calc(((100vh - 1.5rem) - 64px) - 80px)"
             display="block"
             overflowY="scroll"
             flex="1 1 auto"

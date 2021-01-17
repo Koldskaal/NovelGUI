@@ -97,8 +97,7 @@ def custom_search_novels(app):
     payload = {
         "status": "ONGOING",
         "task": "search",
-        "max": amountToCheck,
-        "current": 0,
+        "task_detail": "",
         "novels": {}
     }
     give_output = True
@@ -108,7 +107,8 @@ def custom_search_novels(app):
     for future in futures.as_completed(futures_to_check):
         combined_results += future.result()
         progress += 1
-        payload["current"] = progress
+        payload["progress"] = (progress / amountToCheck) * 100
+        payload["task_detail"] = f"Search sites: {progress}/{amountToCheck}."
         payload["novels"] = process_results(combined_results)
         print(json.dumps(payload))
         if give_output:
@@ -160,18 +160,14 @@ if __name__ == "__main__":
     app.initialize()
 
     data = json.loads(sys.argv[1])
-#     data = {"command": "search", 
-#   "data": {
-#     "query": "strong"
-#   }}
 
     if "command" not in data:
         send_message("ERROR", "No command was specified.")
-        sys.exit(0)
+        sys.exit(1)
 
     if "data" not in data:
         send_message("ERROR", "No data was given.")
-        sys.exit(0)
+        sys.exit(1)
 
     if data["command"] in COMMANDS.keys():
         COMMANDS[data["command"]](app, data["data"])

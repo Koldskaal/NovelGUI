@@ -13,25 +13,23 @@ import {
   Text,
   Spacer
 } from "@chakra-ui/react";
-import { NovelCard, SearchField } from "./components";
-import { NovelResult, ResultBox, ResultBoxState } from "./components/ResultBox"
+import { SearchField, ResultBox } from "./components";
 import {BottomIconBar, TaskManager} from "./components/TaskManager"
 import { Fonts } from "./fonts"
+import {NovelDataContextProvider, NovelResult} from "./components/AppData"
+import { ViewManager } from "./components/modules/ViewManager"
 
 const Root = () => {
-  const [currentData, setData] = useState([] as NovelResult[])
-  const [resultState, setResultState] = useState(ResultBoxState.SelectNovel)
-
-  const updateData = (results: NovelResult[]) => {
-    setData(results);
-  }
 
 
   return (
-    <VStack paddingLeft="20px" paddingRight="20px">
-      <SearchField onDataChange={updateData} onSearchStart={() => setResultState(ResultBoxState.SelectNovel)} />
-      <ResultBox results={currentData} state={resultState}/>
+    <VStack paddingLeft="20px" paddingRight="20px" justifyContent="center" minH="50%">
+      <SearchField onSearchStart={() => ViewManager.broadcast("search", {})}/>
+      <NovelDataContextProvider>
+        <ResultBox />
+      </NovelDataContextProvider>
       <BottomIconBar />
+      
     </VStack>
   );
 };
@@ -44,6 +42,9 @@ const config = {
 const customTheme = extendTheme({ 
   config,
   layerStyles:{
+  justbg: {
+    bg: "gray.800",
+  },
   base: {
     bg: "gray.800",
     color: "gray.50"
@@ -55,6 +56,10 @@ const customTheme = extendTheme({
   fonts: {
     heading: "Open Sans",
     body: "Raleway",
+  },
+  border: {
+    border: "1px solid",
+    borderColor: "gray.500"
   }
 } });
 

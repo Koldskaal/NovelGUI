@@ -3,14 +3,23 @@ body {
 }
 
 .searchBar {
-  min-width: 100%;
+  
 }
 
 ::-webkit-scrollbar {
-  display: none;
+  /* display: none; */
 }
 
 .pointer
 {
   cursor: pointer;
+}
+
+div table {
+  border-collapse: separate !important;
+  border-spacing: 0;
+}
+
+html, body, #root {
+  height: 100%
 }

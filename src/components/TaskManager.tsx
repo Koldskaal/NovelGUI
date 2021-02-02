@@ -16,7 +16,7 @@ import {
   TagLabel,
 } from "@chakra-ui/react";
 import React, { Fragment, useEffect, useState } from "react";
-import { PythonTask, taskManager } from "./PythonCommands";
+import { Message, PythonTask, taskManager } from "./PythonCommands";
 
 type TaskProp = {
   task: PythonTask;
@@ -30,6 +30,11 @@ const TaskManager = (props: { hidden?: boolean }) => {
   const [reversed, setReverse] = useState(false);
   const [taskList, setTaskList] = useState([] as TaskProp[]);
   const [started, setStarted] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setTaskList((oldList) => oldList.sort((a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()))
+  },[taskList])
 
   useEffect(() => {
     if (reversed) {
@@ -41,6 +46,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
 
   const CancelTask = (task: PythonTask) => {
     task.cancel();
+    setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
   };
 
   useEffect(() => {
@@ -52,34 +58,39 @@ const TaskManager = (props: { hidden?: boolean }) => {
         onCancelButton: () => CancelTask(task)
       };
       setTaskList((oldList) => [...oldList, taskProp]);
+      console.log(taskList.length)
 
       return taskProp;
     };
 
     const removeTask = (task: PythonTask) => {
-      setTaskList(taskList.filter((t) => t.task == task));
+      setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
     };
 
     const onAnyTaskStart = (task: PythonTask) => {
       const prop = addTask(task);
-      task.subscribeToEnd(() => removeTask(task));
-      task.subscribeToMessage((message: any) => {
-        if (message.progress) {
-          prop.progress = message.progress;
-        }
-
-        if (message.task_detail) {
-          prop.task_detail = message.task_detail;
-        }
+      task.subscribeToEnd(() => {
+        // prop.progress=100; 
+        setTaskList((oldList) => [...oldList]); 
+        setTimeout(() => removeTask(task), 200)
+      });
+      task.subscribeToMessage((message: Message) => {
+        prop.progress = message.task.progress;
+        prop.task_detail = message.task.details;
+        setDirty(true);       
       });
     };
+
+    
 
     if (!started) {
       console.log("LOCKED AND LOADED!");
       taskManager.subscribeToAnyTaskStart(onAnyTaskStart);
       setStarted(true);
     }
-  }, [started, taskList]);
+
+    if (dirty) {setDirty(false);}
+  }, [started, taskList, dirty]);
 
   const clearAllTasks = () => {
     for (let i = taskList.length - 1; i >= 0; i--) {
@@ -180,7 +191,7 @@ const Task = ({ task_detail, progress, onCancelButton }: TaskProp) => {
         >
           <Center h="100%">
             <Text isTruncated h="20px" maxW="180px" left="0px" fontSize="xs">
-              {task_detail}
+              {task_detail ? task_detail : "Waiting..."}
             </Text>
           </Center>
         </Box>

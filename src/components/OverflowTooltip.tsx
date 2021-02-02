@@ -3,11 +3,12 @@ import { Box, Text, Tooltip } from "@chakra-ui/react";
 
 type TooltipProp = {
   message: string;
-  colSpan?: number | "auto";
   maxW?: string;
+  fontsize?: string;
+  color?:string;
 };
 
-export const OverflowTooltip = ({ message, colSpan, maxW }: TooltipProp) => {
+export const OverflowTooltip = ({ message, maxW, fontsize: fontSize, color }: TooltipProp) => {
   const textElementRef = useRef<HTMLHeadingElement>(null);
 
   const compareSize = () => {
@@ -18,7 +19,7 @@ export const OverflowTooltip = ({ message, colSpan, maxW }: TooltipProp) => {
 
   useEffect(() => {
     compareSize();
-  }, [textElementRef.current]);
+  }, []);
 
   const [hoverStatus, setHover] = useState(false);
 
@@ -30,7 +31,7 @@ export const OverflowTooltip = ({ message, colSpan, maxW }: TooltipProp) => {
         openDelay={300}
         isDisabled={!hoverStatus}
       >
-        <Text isTruncated ref={textElementRef}>
+        <Text fontSize={fontSize} color={color}  isTruncated ref={textElementRef}>
           {message}
         </Text>
       </Tooltip>

@@ -1,21 +1,55 @@
 import { PythonShell, Options } from "python-shell";
+import { v4 as uuidv4 } from "uuid";
+import { DownloadOptions } from "./ResultBox/DownloadOptionsGrid";
+
+const pythonfile = "./novel_commands.py";
+
+export interface Task {
+  name: string;
+  progress: number;
+  details: string;
+}
+
+export interface Message {
+  status: string;
+  task: Task;
+  data: { [key: string]: any };
+}
+
 class PythonTask {
   pyshell: PythonShell;
 
   private onEndSubscribers: { (): void }[] = [];
-  private onMessageSubscribers: { (message: any): void }[] = [];
+  private onMessageSubscribers: { (message: Message): void }[] = [];
 
   private command: string;
   private queueKey: string;
+  private uid: string;
+
+  private position: number;
 
   constructor(command: string, queueKey: string) {
     this.command = command;
     this.queueKey = queueKey;
     taskManager.addToQueue(this.queueKey, this);
+
+    this.uid = uuidv4();
+  }
+
+  getQueuePosition(): number {
+    return this.position;
+  }
+
+  setQueuePosition(position: number): void {
+    this.position = position;
+  }
+
+  getID(): string {
+    return this.uid;
   }
 
   getCommand(): string {
-    return this.command;
+    return JSON.parse(this.command).command;
   }
 
   beginTask(): void {
@@ -25,8 +59,8 @@ class PythonTask {
     };
 
     const handleMessage = function (message: any) {
-      this.onMessageSubscribers.map((listener: (m: any) => void) => {
-        listener(message);
+      this.onMessageSubscribers.map((listener: (m: Message) => void) => {
+        listener(message as Message);
       });
     }.bind(this);
 
@@ -36,16 +70,16 @@ class PythonTask {
       });
     }.bind(this);
 
-    this.pyshell = new PythonShell("./tryout.py", options);
+    this.pyshell = new PythonShell(pythonfile, options);
     this.pyshell.on("message", handleMessage);
     this.pyshell.on("close", handleEnd);
   }
 
-  subscribeToMessage(listener: (message: any) => void): void {
+  subscribeToMessage(listener: (message: Message) => void): void {
     this.onMessageSubscribers.push(listener);
   }
 
-  unsubscribeToMessage(listener: (message: any) => void): void {
+  unsubscribeToMessage(listener: (message: Message) => void): void {
     this.onMessageSubscribers = removeItem(this.onMessageSubscribers, listener);
   }
 
@@ -86,6 +120,8 @@ class TaskManager {
 
   runningQueue: { [id: string]: PythonTask[] } = {};
 
+  currentQueue: number;
+
   addToQueue(queueId: string, task: PythonTask) {
     if (!this.allQueues[queueId]) {
       this.allQueues[queueId] = [] as PythonTask[];
@@ -93,6 +129,7 @@ class TaskManager {
     }
 
     this.allQueues[queueId].push(task);
+    task.setQueuePosition(this.allQueues[queueId].length);
     this.startNextInQueue();
     this.noticeSubscribers(task);
   }
@@ -118,20 +155,45 @@ class TaskManager {
         const task = this.allQueues[id].shift();
         task.beginTask();
         this.runningQueue[id].push(task);
-        
 
         task.subscribeToEnd(() => {
-          this.runningQueue[id] = removeItem(this.runningQueue[id], task);
+          this.runningQueue[id] = this.removeItem(
+            this.runningQueue[id],
+            task
+          ).sort((a, b) => a.getQueuePosition() - b.getQueuePosition());
           this.startNextInQueue();
         });
       }
+
+      for (let i = 0; i < this.allQueues[id].length; i++) {
+        this.allQueues[id][i].setQueuePosition(i);
+      }
+    }
+  }
+
+  clearQueue(queueId: string, cancelRunning = false) {
+    if (!this.allQueues[queueId]) {
+      return;
+    }
+    this.allQueues[queueId] = [] as PythonTask[];
+
+    if (cancelRunning) {
+      this.runningQueue[queueId].forEach((task) => task.cancel());
     }
   }
 
   private noticeSubscribers(task: PythonTask) {
     this.subscribers.map((listener) => {
       listener(task);
-    })
+    });
+  }
+
+  private removeItem(arr: PythonTask[], value: PythonTask) {
+    const index = arr.indexOf(value);
+    if (index > -1) {
+      arr.splice(index, 1);
+    }
+    return arr;
   }
 }
 
@@ -149,4 +211,29 @@ function searchPython(query: string): PythonTask {
   return task;
 }
 
-export { searchPython, PythonTask, taskManager };
+function getInfoPython(url: string): PythonTask {
+  const command = {
+    command: "get_novel_info",
+    data: {
+      url: url,
+    },
+  };
+
+  const task = new PythonTask(JSON.stringify(command), "get_novel_info");
+  return task;
+}
+
+function downloadNovel(url: string, options: DownloadOptions): PythonTask {
+  const command = {
+    command: "download_novel",
+    data: {
+      url: url,
+      options: options,
+    },
+  };
+
+  const task = new PythonTask(JSON.stringify(command), "download_novel");
+  return task;
+}
+
+export { downloadNovel, getInfoPython, searchPython, PythonTask, taskManager };

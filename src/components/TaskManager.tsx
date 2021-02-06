@@ -75,6 +75,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
         setTimeout(() => removeTask(task), 200)
       });
       task.subscribeToMessage((message: Message) => {
+        if (message.status !== "OK") return;
         prop.progress = message.task.progress;
         prop.task_detail = message.task.details;
         setDirty(true);       

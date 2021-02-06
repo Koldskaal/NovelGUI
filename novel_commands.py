@@ -1,5 +1,6 @@
 import os
-from lncrawl.core.novel_info import format_novel
+from lncrawl.core.downloader import download_chapter_body, download_cover, generate_cover
+from lncrawl.core.novel_info import format_novel, save_metadata
 from lncrawl.core.app import App
 from lncrawl.core.novel_search import get_search_result, process_results
 from lncrawl.sources import rejected_sources, crawler_list
@@ -8,6 +9,7 @@ from lncrawl.binders import available_formats
 
 from urllib.parse import urlparse
 import sys, json, logging
+import contextlib
 
 from concurrent import futures
 
@@ -18,21 +20,45 @@ from slugify import slugify
 output_path = ""
 command = ""
 
-def get_range_from_list(list, input):
+@contextlib.contextmanager
+def blockPrinting():
+    sys.stdout = open(os.devnull, 'w')
+    yield
+    sys.stdout = sys.__stdout__
+
+def send_message(status_code, message, data={}, progress=0):
+    standard_msg = {
+        "status": status_code,
+        "task": {
+            "name" : command,
+            "progress": progress,
+            "details": message,
+        },
+    }
+
+    if data:
+        standard_msg["data"] = data
+
+    print(json.dumps(standard_msg))
+
+def get_range_from_list(data_list, input):
     ranges = input.split(",")
+    
     chapters = []
     for range in ranges:
         try:
             if ("-" in range):
                 s = range.split("-")
-                chapters.append(list[s[0]:(s[1] + 1)])
+                for chapter in data_list[(int(s[0])- 1):int(s[1])]:
+                    chapters.append(chapter)
+                
             else:
-                chapters.append(list[range])
-        except:
+                chapters.append(data_list[int(range) - 1])
+        except Exception as e:
+            send_message("ERROR", e)
             continue
-
+    
     return chapters
-
 
 def process_chapter_range(app: App, selection, input):
     chapters = []
@@ -41,7 +67,12 @@ def process_chapter_range(app: App, selection, input):
     elif selection == '2': # Chapters
         chapters = get_range_from_list(app.crawler.chapters, input)
     elif selection == '3': # Volumes
-        chapters = get_range_from_list(app.crawler.volumes, input)
+        volumes = get_range_from_list(app.crawler.volumes, input)
+        chapters = []
+
+        for vol in volumes:
+            for chapter in app.crawler.chapters[int(vol["start_chapter"]-1):int(vol["final_chapter"])]:
+                chapters.append(chapter)
     # end if
 
     if len(chapters) == 0:
@@ -78,20 +109,39 @@ def generate_output_path(app: App, override_path="", force_replace_old=True):
 
     app.output_path = output_path
 
-def send_message(status_code, message, data={}, progress=0):
-    standard_msg = {
-        "status": status_code,
-        "task": {
-            "name" : command,
-            "progress": progress,
-            "details": message,
-        },
+def download_chapters(app: App):
+    # download or generate cover
+    send_message("OK", "Generating cover", progress=1)
+    app.book_cover = download_cover(app)
+    if not app.book_cover:
+        app.book_cover = generate_cover(app)
+    
+
+    if not app.output_formats:
+        app.output_formats = {}
+    # end if
+
+    futures_to_check = {
+        app.crawler.executor.submit(
+            download_chapter_body,
+            app,
+            chapter,
+        ): str(chapter['id'])
+        for chapter in app.chapters
     }
 
-    if data:
-        standard_msg["data"] = data
+    chapter_count = len(app.chapters)
 
-    print(json.dumps(standard_msg))
+    app.progress = 0
+    for future in futures.as_completed(futures_to_check):
+        result = future.result()
+        if result:
+            send_message("ERROR", result)
+        # end if
+        app.progress += 1
+        send_message("OK", f'Downloading chapter {app.progress}/{chapter_count}', progress=(app.progress/chapter_count)*90)
+        input()
+    # end for
 
 def verify_payload(payload, required_key, raise_exception=True):
     if required_key not in payload:
@@ -214,7 +264,7 @@ def get_novel_info(app: App, payload, send_progress=True, enable_login=False):
 def download_novel(app: App, payload):
     verify_payload(payload, "options")
     options = payload["options"]
-
+    send_message("OK", "Initializing crawler", progress=10)
     get_novel_info(app, payload, False)
     
     generate_output_path(app, options["outputPath"])
@@ -222,11 +272,21 @@ def download_novel(app: App, payload):
     app.chapters = process_chapter_range(app, options["rangeOption"]["radio"], options["rangeOption"]["input"])
 
     app.output_formats = {x: (x in options["outputFormats"]) for x in available_formats} 
-    app.start_download()
-    app.bind_books()
-    app.compress_books()
+    save_metadata(app.crawler, app.output_path)
+    download_chapters(app)
+
+    send_message("OK", "Binding books", progress=90)
+    with blockPrinting():
+        app.bind_books()
+    
+    
+    send_message("OK", "Zipping", progress=95)
+    with blockPrinting():
+        app.compress_books()
+    
 
     app.destroy()
+    send_message("OK", "DONE!", progress=100)
 
     if options["openFolder"]:
         if icons.Icons.isWindows:

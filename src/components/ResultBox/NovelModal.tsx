@@ -12,6 +12,7 @@ import {
   Box,
   Collapse,
   Icon,
+  useToast,
 } from "@chakra-ui/react";
 import { FaMinus, FaPlus } from "react-icons/fa";
 import React, { useState } from "react";
@@ -41,8 +42,32 @@ const NovelModal = (props: {
   const { isOpen, onToggle } = useDisclosure();
   const [overrides, setOverrides] = useState({} as DownloadOptions);
 
+  const toast = useToast()
+
   const startDownload = () => {
-    downloadNovel(props.novel.url, overrides);
+    const task = downloadNovel(props.novel.url, overrides);
+    task.subscribeToMessage((message) => {
+      task.send({}); // need to ping back to get continuous updates
+    })
+
+    toast({
+    title: `Downloading ${props.novel.title}`,
+    description: "The novel will download shortly!",
+    status: "success",
+    duration: 5000,
+    isClosable: true
+    })
+
+    task.subscribeToEnd(() => {
+      toast({
+        title: `${props.novel.title} finished`,
+        description: "The novel finished downloading.",
+        status: "success",
+        duration: 5000,
+        isClosable: true
+      })
+    })
+
     props.onClose();
   }
 

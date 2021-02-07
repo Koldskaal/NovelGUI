@@ -32,26 +32,40 @@ const { remote } = electron;
 const dialog = remote.dialog;
 
 export interface DownloadOptions {
-  rangeOption: RangeOption,
-  outputFormats: string[],
-  outputPath: string,
-  openFolder: boolean
+  rangeOption: RangeOption;
+  outputFormats: string[];
+  outputPath: FolderPathOption;
+  openFolder: boolean;
 }
 
-export const DownloadOptionsGrid = (props: {onOptionChange?: (options: DownloadOptions) => void}) => {
+type DownloadProps = {
+  defaultOptions?: DownloadOptions;
+  onOptionChange?: (options: DownloadOptions) => void;
+};
+
+export const DownloadOptionsGrid = ({
+  defaultOptions,
+  onOptionChange,
+}: DownloadProps) => {
   const [downloadOptions, setDownloadOptions] = useState({} as DownloadOptions);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    setIsDirty(true);
-  },[downloadOptions])
+    if (defaultOptions) {
+      setDownloadOptions(defaultOptions);
+    }
+  },[defaultOptions])
 
   useEffect(() => {
-    if (isDirty && props.onOptionChange) {
-      props.onOptionChange(downloadOptions);
+    setIsDirty(true);
+  }, [downloadOptions]);
+
+  useEffect(() => {
+    if (isDirty && onOptionChange) {
+      onOptionChange(downloadOptions);
       setIsDirty(false);
     }
-  },[downloadOptions, isDirty, props])
+  }, [downloadOptions, isDirty, onOptionChange]);
 
   return (
     <Grid
@@ -61,24 +75,32 @@ export const DownloadOptionsGrid = (props: {onOptionChange?: (options: DownloadO
       padding="5px"
     >
       <GridItem>
-        <ChapterRangeOption onChange={(option) => {
-          setDownloadOptions(prev => ({...prev, rangeOption: option}));
-          console.log(option);
-      }}/>
-        <OutputFormatOption defaultValue={["epub"]} onChange={(formats) => {
-          setDownloadOptions(prev => ({...prev, outputFormats: formats}))
-          console.log(formats);
-        }}/>
+        <ChapterRangeOption
+          onChange={(option) => {
+            setDownloadOptions((prev) => ({ ...prev, rangeOption: option }));
+          }}
+          defaultOptions={downloadOptions.rangeOption}
+        />
+        <OutputFormatOption
+          defaultValue={downloadOptions.outputFormats}
+          onChange={(formats) => {
+            setDownloadOptions((prev) => ({ ...prev, outputFormats: formats }));
+          }}
+        />
       </GridItem>
       <GridItem>
-        <FolderPathOption onChange={(path) => {
-          setDownloadOptions(prev => ({...prev, outputPath: path}))
-          console.log(path);
-          }}/>
-        <FolderOpenOption onChange={(open) => {
-          setDownloadOptions(prev => ({...prev, openFolder: open}))
-          console.log(open);
-          }} />
+        <FolderPathOptions
+          onChange={(path) => {
+            setDownloadOptions((prev) => ({ ...prev, outputPath: path }));
+          }}
+          defaultValue={downloadOptions.outputPath}
+        />
+        <FolderOpenOption
+          onChange={(open) => {
+            setDownloadOptions((prev) => ({ ...prev, openFolder: open }));
+          }}
+          defaultValue={downloadOptions.openFolder}
+        />
       </GridItem>
     </Grid>
   );
@@ -87,7 +109,7 @@ export const DownloadOptionsGrid = (props: {onOptionChange?: (options: DownloadO
 enum RangeType {
   All = "1",
   Chapters = "2",
-  Volumes = "3"
+  Volumes = "3",
 }
 
 type RangeOption = {
@@ -95,6 +117,7 @@ type RangeOption = {
   input: string;
 };
 const ChapterRangeOption = (props: {
+  defaultOptions?: RangeOption;
   onChange?: (option: RangeOption) => void;
 }) => {
   const [value, setValue] = useState("1" as RangeType);
@@ -103,34 +126,49 @@ const ChapterRangeOption = (props: {
   const [isDirty, setIsDirty] = useState(false);
 
   const [rangeOption, setRangeOption] = useState({} as RangeOption);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   useEffect(() => {
-    if (isDirty && props.onChange) 
-    {
+    if (hasLoaded) return;
+    if (props.defaultOptions) {
+      setValue(props.defaultOptions.radio);
+      if (props.defaultOptions.radio === "2") {
+        setChaValue(props.defaultOptions.input);
+      } else if (props.defaultOptions.radio === "3") {
+        setVolValue(props.defaultOptions.input);
+      }
+    }
+
+    setHasLoaded(true);
+  }, [hasLoaded, props.defaultOptions]);
+
+  useEffect(() => {
+    if (isDirty && props.onChange) {
       props.onChange(rangeOption);
       setIsDirty(false);
     }
-  }, [isDirty, props, rangeOption])
+  }, [isDirty, props, rangeOption]);
 
   useEffect(() => {
     const ro = {} as RangeOption;
-      ro.radio = value;
-      ro.input = "";
-      if (value === "2") {
-        ro.input = chaValue;
-      } else if (value === "3") {
-        ro.input = volValue;
-      }
-      setRangeOption(ro);
-      setIsDirty(true);
+    ro.radio = value;
+    ro.input = "";
+    if (value === "2") {
+      ro.input = chaValue;
+    } else if (value === "3") {
+      ro.input = volValue;
+    }
+    setRangeOption(ro);
+    setIsDirty(true);
   }, [chaValue, value, volValue]);
-
-  
 
   return (
     <Stack>
       <Text>Select download range</Text>
-      <RadioGroup onChange={(v) => setValue(v.toString() as RangeType)} value={value}>
+      <RadioGroup
+        onChange={(v) => setValue(v.toString() as RangeType)}
+        value={value}
+      >
         <Stack direction="column">
           <Radio value="1">All</Radio>
           <Radio value="2">Chapters</Radio>
@@ -181,7 +219,7 @@ const OutputFormatOption = (props: {
 
   useEffect(() => {
     setIsDirty(true);
-  },[format])
+  }, [format]);
 
   useEffect(() => {
     let text = "None";
@@ -253,9 +291,12 @@ const options: Electron.OpenDialogOptions = {
   properties: ["openDirectory"],
 };
 
-const FolderPathOption = (props: {
-  onChange?: (path: string) => void;
-}) => {
+type FolderPathOption = {
+  path?: string,
+  useCustomPath?: boolean
+}
+
+const FolderPathOptions = (props: {defaultValue?: FolderPathOption, onChange?: (option: FolderPathOption) => void }) => {
   const [filePath, setFilePath] = useState("");
   const [useCustomPath, setUseCustomPath] = useState(false);
 
@@ -268,15 +309,24 @@ const FolderPathOption = (props: {
   };
 
   useEffect(() => {
+    if (props.defaultValue) {
+      if (props.defaultValue.path)
+        setFilePath(props.defaultValue.path);
+      if (props.defaultValue.useCustomPath)
+        setUseCustomPath(props.defaultValue.useCustomPath)
+    }
+  },[props.defaultValue])
+
+  useEffect(() => {
     setIsDirty(true);
-  },[filePath])
+  }, [filePath, useCustomPath]);
 
   useEffect(() => {
     if (isDirty && props.onChange) {
-      props.onChange(filePath);
+      props.onChange({path:filePath, useCustomPath:useCustomPath});
       setIsDirty(false);
     }
-  }, [filePath, isDirty, props]);
+  }, [filePath, isDirty, props, useCustomPath]);
 
   return (
     <Stack>
@@ -318,15 +368,19 @@ const FolderPathOption = (props: {
   );
 };
 
-const FolderOpenOption = (props: {
-  onChange?: (value: boolean) => void;
-}) => {
+const FolderOpenOption = (props: {defaultValue?: boolean, onChange?: (value: boolean) => void }) => {
   const [value, setValue] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
+    if (props.defaultValue) {
+      setValue(props.defaultValue);
+    }
+  },[props.defaultValue])
+
+  useEffect(() => {
     setIsDirty(true);
-  },[value])
+  }, [value]);
 
   useEffect(() => {
     if (isDirty && props.onChange) {

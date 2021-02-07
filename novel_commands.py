@@ -331,7 +331,9 @@ if __name__ == "__main__":
             COMMANDS[command](app, data)
         except Exception as e:
             send_message("ERROR", "Failed with: " +str(e))
+            sys.exit(1)
     else:
         send_message("ERROR", f"{command} is not a valid command")
+        sys.exit(1)
 
 

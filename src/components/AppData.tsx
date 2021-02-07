@@ -105,6 +105,17 @@ const useSearchDataContext = () => {
   return context.searchResults as NovelResult[];
 };
 
+const usePersistedState = (key:string, defaultValue: any) => {
+  const [state, setState] = useState(() => {
+    const persistedState = localStorage.getItem(key);
+    return persistedState ? JSON.parse(persistedState) : defaultValue;
+  });
+  useEffect(() => {
+    window.localStorage.setItem(key, JSON.stringify(state));
+  }, [state, key]);
+  return [state, setState];
+}
+
 export {
   useNovelDataContext,
   useSearchDataContext,
@@ -112,4 +123,5 @@ export {
   NovelResult,
   Novel,
   NovelInfo,
+  usePersistedState
 };

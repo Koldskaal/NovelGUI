@@ -16,6 +16,12 @@ export interface Message {
   data: { [key: string]: any };
 }
 
+export enum TaskStatus {
+  OK,
+  CANCEL,
+  ERROR
+}
+
 class PythonTask {
   pyshell: PythonShell;
 
@@ -27,6 +33,7 @@ class PythonTask {
   private uid: string;
 
   private position: number;
+  status: TaskStatus;
 
   constructor(command: string, queueKey: string) {
     this.command = command;
@@ -52,6 +59,10 @@ class PythonTask {
     return JSON.parse(this.command).command;
   }
 
+  getFullCommand(): JSON {
+    return JSON.parse(this.command);
+  }
+
   beginTask(): void {
     const options: Options = {
       mode: "json",
@@ -70,8 +81,15 @@ class PythonTask {
       });
     }.bind(this);
 
+    const handleError = function () {
+      this.status = TaskStatus.ERROR
+    }.bind(this)
+
+    this.status = TaskStatus.OK;
+
     this.pyshell = new PythonShell(pythonfile, options);
     this.pyshell.on("message", handleMessage);
+    this.pyshell.on("error", handleError);
     this.pyshell.on("close", handleEnd);
   }
 
@@ -100,6 +118,7 @@ class PythonTask {
     taskManager.removeFromQueue(this.queueKey, this);
 
     if (typeof this.pyshell === "undefined") return;
+    this.status = TaskStatus.CANCEL;
     this.pyshell.kill();
   }
 }

@@ -14,6 +14,7 @@ import {
   Spacer,
   Tag,
   TagLabel,
+  useToast,
 } from "@chakra-ui/react";
 import React, { Fragment, useEffect, useState } from "react";
 import { Message, PythonTask, taskManager } from "./PythonCommands";
@@ -31,6 +32,8 @@ const TaskManager = (props: { hidden?: boolean }) => {
   const [taskList, setTaskList] = useState([] as TaskProp[]);
   const [started, setStarted] = useState(false);
   const [dirty, setDirty] = useState(false);
+  
+  const toast = useToast();
 
   useEffect(() => {
     setTaskList((oldList) => oldList.sort((a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()))
@@ -44,9 +47,18 @@ const TaskManager = (props: { hidden?: boolean }) => {
     }
   }, [props.hidden, reversed]);
 
-  const CancelTask = (task: PythonTask) => {
+  const CancelTask = (task: PythonTask, showToast: boolean) => {
     task.cancel();
     setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
+
+    if (showToast) {
+      toast({
+        title: `Task: ${task.getCommand()} cancelled`,
+        status: "error",
+        duration: 2000,
+        isClosable: true
+      })
+    }
   };
 
   useEffect(() => {
@@ -55,7 +67,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
         task: task,
         task_detail: "",
         progress: 0,
-        onCancelButton: () => CancelTask(task)
+        onCancelButton: () => CancelTask(task, true)
       };
       setTaskList((oldList) => [...oldList, taskProp]);
       console.log(taskList.length)
@@ -95,8 +107,17 @@ const TaskManager = (props: { hidden?: boolean }) => {
 
   const clearAllTasks = () => {
     for (let i = taskList.length - 1; i >= 0; i--) {
-      CancelTask(taskList[i].task);
+      CancelTask(taskList[i].task, false);
     }
+
+    if (taskList.length === 0) return; 
+    toast({
+      title: "Canceling all tasks",
+      description: "Clearing both the queue and all active tasks!",
+      status: "info",
+      duration: 2000,
+      isClosable: true,
+    })
   }
 
   return (

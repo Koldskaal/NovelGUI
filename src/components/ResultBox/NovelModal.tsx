@@ -15,11 +15,11 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import { FaMinus, FaPlus } from "react-icons/fa";
-import React, { useState } from "react";
-import { Novel } from "../AppData";
+import React, { useEffect, useState } from "react";
+import { Novel, usePersistedState } from "../AppData";
 import { DownloadOptions, DownloadOptionsGrid } from "./DownloadOptionsGrid";
 import { NovelInfoGrid } from "./NovelInfoGrid";
-import { downloadNovel } from "../PythonCommands";
+import { downloadNovel, TaskStatus } from "../PythonCommands";
 
 
 
@@ -42,7 +42,19 @@ const NovelModal = (props: {
   const { isOpen, onToggle } = useDisclosure();
   const [overrides, setOverrides] = useState({} as DownloadOptions);
 
+  const [prevOptions, setPrevOptions] = usePersistedState("options", {} as DownloadOptions)
+  
   const toast = useToast()
+
+  const closeModal = () => {
+    const options = {} as DownloadOptions;
+    options.openFolder = overrides.openFolder;
+    options.outputFormats = overrides.outputFormats;
+    options.outputPath = overrides.outputPath;
+    setPrevOptions(options);
+
+    props.onClose();
+  };
 
   const startDownload = () => {
     const task = downloadNovel(props.novel.url, overrides);
@@ -51,28 +63,29 @@ const NovelModal = (props: {
     })
 
     toast({
-    title: `Downloading ${props.novel.title}`,
+    title: `${props.novel.title}`,
     description: "The novel will download shortly!",
     status: "success",
-    duration: 5000,
+    duration: 2000,
     isClosable: true
     })
 
     task.subscribeToEnd(() => {
+      if (task.status !== TaskStatus.OK) return;
       toast({
-        title: `${props.novel.title} finished`,
+        title: `${props.novel.title}`,
         description: "The novel finished downloading.",
         status: "success",
-        duration: 5000,
+        duration: 2000,
         isClosable: true
       })
     })
 
-    props.onClose();
+    closeModal();
   }
 
   return (
-    <Modal onClose={props.onClose} isOpen={props.isOpen} isCentered>
+    <Modal onClose={closeModal} isOpen={props.isOpen} isCentered>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{hostname}</ModalHeader>
@@ -97,13 +110,13 @@ const NovelModal = (props: {
           </Button>
 
           <Collapse in={isOpen} animateOpacity>
-            <DownloadOptionsGrid onOptionChange={(options) => setOverrides(options)}/>
+            <DownloadOptionsGrid defaultOptions={prevOptions} onOptionChange={(options) => setOverrides(options)}/>
           </Collapse>
         </ModalBody>
         <ModalFooter>
           <HStack spacing={4}>
             <Button onClick={startDownload}>Download</Button>
-            <Button onClick={props.onClose}>Close</Button>
+            <Button onClick={closeModal}>Close</Button>
           </HStack>
         </ModalFooter>
       </ModalContent>

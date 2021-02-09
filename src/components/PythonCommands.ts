@@ -1,5 +1,6 @@
 import { PythonShell, Options } from "python-shell";
 import { v4 as uuidv4 } from "uuid";
+import { getFromStorage } from "./AppData";
 import { DownloadOptions } from "./ResultBox/DownloadOptionsGrid";
 
 const pythonfile = "./novel_commands.py";
@@ -17,9 +18,11 @@ export interface Message {
 }
 
 export enum TaskStatus {
-  OK,
+  SUCCESS,
   CANCEL,
-  ERROR
+  ERROR,
+  RUNNING,
+  WAITING
 }
 
 class PythonTask {
@@ -27,7 +30,8 @@ class PythonTask {
 
   private onEndSubscribers: { (): void }[] = [];
   private onMessageSubscribers: { (message: Message): void }[] = [];
-
+  private onTaskBegin: { (): void }[] = [];
+  
   private command: string;
   private queueKey: string;
   private uid: string;
@@ -39,6 +43,7 @@ class PythonTask {
     this.command = command;
     this.queueKey = queueKey;
     taskManager.addToQueue(this.queueKey, this);
+    this.status = TaskStatus.WAITING;
 
     this.uid = uuidv4();
   }
@@ -49,6 +54,7 @@ class PythonTask {
 
   setQueuePosition(position: number): void {
     this.position = position;
+    
   }
 
   getID(): string {
@@ -76,6 +82,8 @@ class PythonTask {
     }.bind(this);
 
     const handleEnd = function () {
+      if (this.status === TaskStatus.RUNNING)
+        this.status = TaskStatus.SUCCESS;
       this.onEndSubscribers.map((listener: () => void) => {
         listener();
       });
@@ -85,12 +93,18 @@ class PythonTask {
       this.status = TaskStatus.ERROR
     }.bind(this)
 
-    this.status = TaskStatus.OK;
+    this.status = TaskStatus.RUNNING;
 
     this.pyshell = new PythonShell(pythonfile, options);
     this.pyshell.on("message", handleMessage);
     this.pyshell.on("error", handleError);
     this.pyshell.on("close", handleEnd);
+
+    this.position = -1;
+
+    this.onTaskBegin.map((listener: () => void) => {
+      listener();
+    });
   }
 
   subscribeToMessage(listener: (message: Message) => void): void {
@@ -107,6 +121,14 @@ class PythonTask {
 
   unsubscribeToEnd(listener: () => void): void {
     this.onEndSubscribers = removeItem(this.onEndSubscribers, listener);
+  }
+
+  subscribeToBeginTask(listener: () => void): void {
+    this.onTaskBegin.push(listener);
+  }
+
+  unsubscribeToBeginTask(listener: () => void): void {
+    this.onTaskBegin = removeItem(this.onTaskBegin, listener);
   }
 
   send(message: any): void {
@@ -139,16 +161,19 @@ class TaskManager {
 
   runningQueue: { [id: string]: PythonTask[] } = {};
 
-  currentQueue: number;
+  queuePositions: { [id: string]: number } = {};
 
   addToQueue(queueId: string, task: PythonTask) {
     if (!this.allQueues[queueId]) {
       this.allQueues[queueId] = [] as PythonTask[];
       this.runningQueue[queueId] = [] as PythonTask[];
+      this.queuePositions[queueId] = 1;
+      
     }
 
     this.allQueues[queueId].push(task);
-    task.setQueuePosition(this.allQueues[queueId].length);
+    task.setQueuePosition(this.queuePositions[queueId]);
+    this.queuePositions[queueId] += 1;
     this.startNextInQueue();
     this.noticeSubscribers(task);
   }
@@ -173,7 +198,9 @@ class TaskManager {
       if (this.allQueues[id].length > 0) {
         const task = this.allQueues[id].shift();
         task.beginTask();
+        task.status = TaskStatus.WAITING;
         this.runningQueue[id].push(task);
+        task.setQueuePosition(0);
 
         task.subscribeToEnd(() => {
           this.runningQueue[id] = this.removeItem(
@@ -243,11 +270,20 @@ function getInfoPython(url: string): PythonTask {
 }
 
 function downloadNovel(url: string, options: DownloadOptions): PythonTask {
+  const defOpt = getFromStorage("defaultOptions");
+  const data = {
+    overridePath: options.folderPathOption.useCustomPath ? options.folderPathOption.path : "",
+    rangeOption: options.rangeOption,
+    outputFormats: options.outputFormats,
+    openFolder: options.openFolder,
+    basePath: defOpt.outputPath
+  }
+
   const command = {
     command: "download_novel",
     data: {
       url: url,
-      options: options,
+      options: data,
     },
   };
 

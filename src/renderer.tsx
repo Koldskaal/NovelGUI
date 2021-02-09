@@ -14,7 +14,7 @@ import {
   Spacer
 } from "@chakra-ui/react";
 import { SearchField, ResultBox } from "./components";
-import {BottomIconBar, TaskManager} from "./components/TaskManager"
+import { BottomIconBar } from "./components/BottomIconBar/BottomIconBar";
 import { Fonts } from "./fonts"
 import {NovelDataContextProvider, NovelResult} from "./components/AppData"
 import { ViewManager } from "./components/modules/ViewManager"

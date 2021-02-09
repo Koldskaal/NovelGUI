@@ -1,11 +1,10 @@
-import { RepeatIcon, MinusIcon, DeleteIcon } from "@chakra-ui/icons";
+import { MinusIcon, DeleteIcon } from "@chakra-ui/icons";
 import {
   Box,
   Progress,
   Fade,
   Flex,
   IconButton,
-  useDisclosure,
   CloseButton,
   HStack,
   VStack,
@@ -15,9 +14,10 @@ import {
   Tag,
   TagLabel,
   useToast,
+  Spinner,
 } from "@chakra-ui/react";
-import React, { Fragment, useEffect, useState } from "react";
-import { Message, PythonTask, taskManager } from "./PythonCommands";
+import React, { useCallback, useEffect, useState } from "react";
+import { Message, PythonTask, taskManager, TaskStatus } from "../PythonCommands";
 
 type TaskProp = {
   task: PythonTask;
@@ -40,6 +40,10 @@ const TaskManager = (props: { hidden?: boolean }) => {
   },[taskList])
 
   useEffect(() => {
+    console.log(taskList);
+  },[taskList])
+
+  useEffect(() => {
     if (reversed) {
       setHide(!props.hidden);
     } else {
@@ -47,7 +51,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
     }
   }, [props.hidden, reversed]);
 
-  const CancelTask = (task: PythonTask, showToast: boolean) => {
+  const CancelTask = useCallback((task: PythonTask, showToast: boolean) => {
     task.cancel();
     setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
 
@@ -59,7 +63,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
         isClosable: true
       })
     }
-  };
+  },[toast])
 
   useEffect(() => {
     const addTask = (task: PythonTask) => {
@@ -92,6 +96,11 @@ const TaskManager = (props: { hidden?: boolean }) => {
         prop.task_detail = message.task.details;
         setDirty(true);       
       });
+      task.subscribeToBeginTask(() => {
+        prop.progress = 0.1;
+        prop.task_detail = "Starting up"
+        setTaskList((oldList) => oldList.sort((a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()));
+      })
     };
 
     
@@ -103,7 +112,7 @@ const TaskManager = (props: { hidden?: boolean }) => {
     }
 
     if (dirty) {setDirty(false);}
-  }, [started, taskList, dirty]);
+  }, [started, taskList, dirty, CancelTask]);
 
   const clearAllTasks = () => {
     for (let i = taskList.length - 1; i >= 0; i--) {
@@ -188,8 +197,13 @@ const TaskManager = (props: { hidden?: boolean }) => {
   );
 };
 
-const Task = ({ task_detail, progress, onCancelButton }: TaskProp) => {
+const Task = ({task, task_detail, progress, onCancelButton }: TaskProp) => {
   const [showCloseBtn, setShowCloseBtn] = useState(false);
+
+  const generateLabel = () => {
+    if (progress > 0) return progress.toFixed(0).toString() + "%"
+    return <Spinner size="sm" />
+  }
 
   return (
     <Box
@@ -221,8 +235,8 @@ const Task = ({ task_detail, progress, onCancelButton }: TaskProp) => {
 
       <HStack w="100%" pos="relative">
         <Center position="absolute" top="-26px" left="5px" w="50px" zIndex="2">
-          <Tag colorScheme={progress > 0 ? "green" : "red"} variant="solid">
-            <TagLabel >{progress.toFixed(0)}%</TagLabel>
+          <Tag variant="outline" width="100%" justifyContent="center">
+            <TagLabel  >{generateLabel()}</TagLabel>
           </Tag>
         </Center>
         <Center>
@@ -250,35 +264,4 @@ const Task = ({ task_detail, progress, onCancelButton }: TaskProp) => {
   );
 };
 
-const BottomIconBar = () => {
-  const { isOpen, onToggle } = useDisclosure();
-
-  return (
-    <Fragment>
-      <Flex
-        height="30px"
-        pos="fixed"
-        bottom="0"
-        w="100%"
-        bg="blue.600"
-        boxShadow="inner"
-        paddingLeft="10px"
-        paddingRight="10px"
-      >
-        <Fade in={isOpen}></Fade>
-        <Spacer />
-        <Box pos="relative">
-          <TaskManager hidden={isOpen} />
-          <IconButton
-            aria-label="Show queued tasks"
-            icon={<RepeatIcon />}
-            onClick={onToggle}
-            size="xs"
-          />
-        </Box>
-      </Flex>
-    </Fragment>
-  );
-};
-
-export { TaskManager, BottomIconBar };
+export { TaskManager };

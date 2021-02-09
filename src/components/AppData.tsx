@@ -116,6 +116,10 @@ const usePersistedState = (key:string, defaultValue: any) => {
   return [state, setState];
 }
 
+const getFromStorage = (key: string) => {
+  return JSON.parse(localStorage.getItem(key));
+} 
+
 export {
   useNovelDataContext,
   useSearchDataContext,
@@ -123,5 +127,6 @@ export {
   NovelResult,
   Novel,
   NovelInfo,
-  usePersistedState
+  usePersistedState,
+  getFromStorage
 };

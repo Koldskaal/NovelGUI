@@ -80,7 +80,7 @@ def process_chapter_range(app: App, selection, input):
     # end if
     return chapters
 
-def generate_output_path(app: App, override_path="", force_replace_old=True):
+def generate_output_path(app: App, base_path, override_path="", force_replace_old=True):
     if not app.good_file_name:
         app.good_file_name = slugify(
             app.crawler.novel_title,
@@ -93,7 +93,7 @@ def generate_output_path(app: App, override_path="", force_replace_old=True):
 
     source_name = slugify(urlparse(app.crawler.home_url).netloc)
 
-    output_path = os.path.join(
+    output_path = os.path.join(base_path,
         'Lightnovels', source_name, app.good_file_name)
 
     if len(override_path) > 0:
@@ -267,7 +267,7 @@ def download_novel(app: App, payload):
     send_message("OK", "Initializing crawler", progress=10)
     get_novel_info(app, payload, False)
     
-    generate_output_path(app, options["outputPath"])
+    generate_output_path(app, options["basePath"], options["overridePath"])
 
     app.chapters = process_chapter_range(app, options["rangeOption"]["radio"], options["rangeOption"]["input"])
 

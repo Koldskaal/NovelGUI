@@ -50,7 +50,7 @@ const NovelModal = (props: {
     const options = {} as DownloadOptions;
     options.openFolder = overrides.openFolder;
     options.outputFormats = overrides.outputFormats;
-    options.outputPath = overrides.outputPath;
+    options.folderPathOption = overrides.folderPathOption;
     setPrevOptions(options);
 
     props.onClose();
@@ -71,7 +71,8 @@ const NovelModal = (props: {
     })
 
     task.subscribeToEnd(() => {
-      if (task.status !== TaskStatus.OK) return;
+      console.log(task.status);
+      if (task.status !== TaskStatus.SUCCESS) return;
       toast({
         title: `${props.novel.title}`,
         description: "The novel finished downloading.",

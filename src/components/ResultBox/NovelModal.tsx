@@ -46,6 +46,10 @@ const NovelModal = (props: {
   
   const toast = useToast()
 
+  useEffect(() => {
+    console.log(props.novel.title);
+  },[props.novel.title])
+
   const closeModal = () => {
     const options = {} as DownloadOptions;
     options.openFolder = overrides.openFolder;

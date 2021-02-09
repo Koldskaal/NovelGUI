@@ -24,7 +24,9 @@ const Root = () => {
 
   return (
     <VStack paddingLeft="20px" paddingRight="20px" justifyContent="center" minH="50%">
+      <NovelDataContextProvider>
       <SearchField onSearchStart={() => ViewManager.broadcast("search", {})}/>
+      </NovelDataContextProvider>
       <NovelDataContextProvider>
         <ResultBox />
       </NovelDataContextProvider>

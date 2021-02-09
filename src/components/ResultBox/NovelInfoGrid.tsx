@@ -22,6 +22,8 @@ export const NovelInfoGrid = (props: { novel: Novel; }) => {
   useEffect(() => {
     const url = new URL(props.novel.url);
     console.log("aspas");
+    console.log(props.novel.title);
+    console.log(data);
     if (data[props.novel.title.toLowerCase()]) {
       const info = data[props.novel.title.toLowerCase()][url.hostname];
       console.log(info);
@@ -29,7 +31,7 @@ export const NovelInfoGrid = (props: { novel: Novel; }) => {
         setNovelInfo(info);
       }
     }
-  }, [props.novel, data]);
+  }, [props.novel.url, props.novel.title, data]);
 
   const author = () => {
     if (!isEmpty(novelInfo)) {

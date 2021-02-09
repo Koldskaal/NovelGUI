@@ -3,7 +3,7 @@ body {
 }
 
 .searchBar {
-  
+  width: 100%;
 }
 
 ::-webkit-scrollbar {

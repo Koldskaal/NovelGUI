@@ -47,7 +47,6 @@ const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
           }
         } else if (message.task.name === "get_novel_info") {
           if (typeof message.data === "undefined") {
-            console.log(message.task.details);
             return;
           }
           const title: string = message.data.title.toString().toLowerCase();

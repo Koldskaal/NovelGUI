@@ -6,7 +6,7 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { ChevronRightIcon } from "@chakra-ui/icons";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { OverflowTooltip } from "../OverflowTooltip";
 
 import { taskManager } from "../PythonCommands";
@@ -36,9 +36,10 @@ export const ResultBox = () => {
   const searchResults = useSearchDataContext();
 
   useEffect(() => {
-    ViewManager.subscribe("search", (event: Event) => {
+    const onSearch = function (event: Event) {
       setState(ResultBoxState.SelectNovel);
-    });
+    }
+    ViewManager.subscribe("search", onSearch)
   }, []);
 
   const selectedNovel = (novel: NovelResult) => {
@@ -76,7 +77,7 @@ export const ResultBox = () => {
   };
 
   return (
-    <Box minWidth="100%" maxWidth="100%">
+    <Box minWidth="100%" maxWidth="100%"  onFocus={() => console.log("FOCUSED BOX")}>
       <Box>
         <TopBar
           resultState={currentState}

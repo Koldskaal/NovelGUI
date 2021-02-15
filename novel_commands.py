@@ -236,8 +236,13 @@ def get_novel_info(app: App, payload, send_progress=True, enable_login=False):
     app.crawler.initialize()
 
     # Handle login later!
-    if enable_login and app.can_do('login') and app.login_data:
-            app.crawler.login(*app.login_data)
+    if enable_login and app.can_do('login'):
+        send_message("LOGIN", "Want to login?")
+        try:
+            login = json.loads(input())
+            app.crawler.login(login["username"], login["password"])
+        except:
+            send_message("ERROR", "Login failed!")
 
     if send_progress:
         send_message("OK", "Gathering info", progress=50)
@@ -265,7 +270,7 @@ def download_novel(app: App, payload):
     verify_payload(payload, "options")
     options = payload["options"]
     send_message("OK", "Initializing crawler", progress=10)
-    get_novel_info(app, payload, False)
+    get_novel_info(app, payload, True)
     
     generate_output_path(app, options["basePath"], options["overridePath"])
 

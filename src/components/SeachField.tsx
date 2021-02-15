@@ -72,8 +72,9 @@ export const SearchField = ({
       task.send({}); // need to ping back to get continuous updates
     });
 
+    task.subscribeToEnd(() => setIsLoading(false));
+
     if (onSearchEnd) {
-      setIsLoading(false);
       task.subscribeToEnd(onSearchEnd);
     }
 
@@ -114,7 +115,7 @@ export const SearchField = ({
           </motion.div>
         </Center>
       </form>
-      
+
       <NovelModal
         novel={currNovel}
         isOpen={openModal}

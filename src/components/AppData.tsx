@@ -23,11 +23,33 @@ type NovelInfo = {
   volumes: number;
   chapters: number;
 };
-const NovelDataContext = createContext({ cache: {}, searchResults: [] });
+
+type callback = () => void;
+
+const NovelDataContext = createContext({ cache: {}, searchResults: [], subscribeToUpdates:(callback:callback) => {return;},});
 
 const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
   const [searchResults, setSearchResults] = useState([] as NovelResult[]);
   const [cache, setCache] = useState({} as CachedNovelInfo);
+  const [callbacks, setCallbacks] = useState([] as callback[]);
+
+  const [isDirty, setIsDirty] = useState(false);
+  const [started, setStarted] = useState(false);
+
+  
+
+  useEffect(() => {
+    const notifyUpdate = () => {
+      callbacks.forEach((callback) => {
+        callback();
+      })
+    }
+
+    if (isDirty) {
+      notifyUpdate();
+      setIsDirty(false);
+    }
+  },[callbacks, isDirty])
 
   useEffect(() => {
     const onNewTask = (task: PythonTask) => {
@@ -70,16 +92,24 @@ const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
             return oldCache;
           }
           );
+          setIsDirty(true);
         }
       });
     };
 
-    taskManager.subscribeToAnyTaskStart(onNewTask);
-  }, [cache]);
+    if (!started) {
+      taskManager.subscribeToAnyTaskStart(onNewTask);
+      setStarted(true);
+    }
+  }, [cache, started]);
+
+  const addToList = (callback: callback) => {
+    setCallbacks((oldList) => [...oldList, callback]);
+  } 
 
   return (
     <NovelDataContext.Provider
-      value={{ cache: cache, searchResults: searchResults }}
+      value={{ cache: cache, searchResults: searchResults, subscribeToUpdates:addToList }}
     >
       {props.children}
     </NovelDataContext.Provider>
@@ -93,6 +123,15 @@ const useNovelDataContext = () => {
   }
 
   return context.cache as CachedNovelInfo;
+};
+
+const useSubscribeToUpdates = () => {
+  const context = useContext(NovelDataContext);
+  if (context === undefined) {
+    throw new Error("Context must be used within a Provider");
+  }
+
+  return context.subscribeToUpdates;
 };
 
 const useSearchDataContext = () => {
@@ -122,6 +161,7 @@ const getFromStorage = (key: string) => {
 export {
   useNovelDataContext,
   useSearchDataContext,
+  useSubscribeToUpdates,
   NovelDataContextProvider,
   NovelResult,
   Novel,

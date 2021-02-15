@@ -15,13 +15,30 @@ import {
   TagLabel,
   useToast,
   Spinner,
+  useDisclosure,
+  Button,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Input,
+  InputGroup,
+  InputRightElement,
 } from "@chakra-ui/react";
 import React, { useCallback, useEffect, useState } from "react";
-import { Message, PythonTask, taskManager, TaskStatus } from "../PythonCommands";
+import {
+  Message,
+  PythonTask,
+  taskManager,
+  TaskStatus,
+} from "../PythonCommands";
 
 type TaskProp = {
   task: PythonTask;
-  task_detail: string,
+  task_detail: string;
   progress: number;
   onCancelButton: () => void;
 };
@@ -32,16 +49,16 @@ const TaskManager = (props: { hidden?: boolean }) => {
   const [taskList, setTaskList] = useState([] as TaskProp[]);
   const [started, setStarted] = useState(false);
   const [dirty, setDirty] = useState(false);
-  
+
   const toast = useToast();
 
   useEffect(() => {
-    setTaskList((oldList) => oldList.sort((a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()))
-  },[taskList])
-
-  useEffect(() => {
-    console.log(taskList);
-  },[taskList])
+    setTaskList((oldList) =>
+      oldList.sort(
+        (a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()
+      )
+    );
+  }, [taskList]);
 
   useEffect(() => {
     if (reversed) {
@@ -51,19 +68,24 @@ const TaskManager = (props: { hidden?: boolean }) => {
     }
   }, [props.hidden, reversed]);
 
-  const CancelTask = useCallback((task: PythonTask, showToast: boolean) => {
-    task.cancel();
-    setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
+  const CancelTask = useCallback(
+    (task: PythonTask, showToast: boolean) => {
+      task.cancel();
+      setTaskList((oldList) =>
+        oldList.filter((t) => t.task.getID() != task.getID())
+      );
 
-    if (showToast) {
-      toast({
-        title: `Task: ${task.getCommand()} cancelled`,
-        status: "error",
-        duration: 2000,
-        isClosable: true
-      })
-    }
-  },[toast])
+      if (showToast) {
+        toast({
+          title: `Task: ${task.getCommand()} cancelled`,
+          status: "error",
+          duration: 2000,
+          isClosable: true,
+        });
+      }
+    },
+    [toast]
+  );
 
   useEffect(() => {
     const addTask = (task: PythonTask) => {
@@ -71,39 +93,41 @@ const TaskManager = (props: { hidden?: boolean }) => {
         task: task,
         task_detail: "",
         progress: 0,
-        onCancelButton: () => CancelTask(task, true)
+        onCancelButton: () => CancelTask(task, true),
       };
       setTaskList((oldList) => [...oldList, taskProp]);
-      console.log(taskList.length)
-
       return taskProp;
     };
 
     const removeTask = (task: PythonTask) => {
-      setTaskList((oldList) => oldList.filter((t) => t.task.getID() != task.getID()));
+      setTaskList((oldList) =>
+        oldList.filter((t) => t.task.getID() != task.getID())
+      );
     };
 
     const onAnyTaskStart = (task: PythonTask) => {
       const prop = addTask(task);
       task.subscribeToEnd(() => {
-        // prop.progress=100; 
-        setTaskList((oldList) => [...oldList]); 
-        setTimeout(() => removeTask(task), 200)
+        // prop.progress=100;
+        setTaskList((oldList) => [...oldList]);
+        setTimeout(() => removeTask(task), 200);
       });
       task.subscribeToMessage((message: Message) => {
         if (message.status !== "OK") return;
         prop.progress = message.task.progress;
         prop.task_detail = message.task.details;
-        setDirty(true);       
+        setDirty(true);
       });
       task.subscribeToBeginTask(() => {
         prop.progress = 0.1;
-        prop.task_detail = "Starting up"
-        setTaskList((oldList) => oldList.sort((a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()));
-      })
+        prop.task_detail = "Starting up";
+        setTaskList((oldList) =>
+          oldList.sort(
+            (a, b) => a.task.getQueuePosition() - b.task.getQueuePosition()
+          )
+        );
+      });
     };
-
-    
 
     if (!started) {
       console.log("LOCKED AND LOADED!");
@@ -111,23 +135,25 @@ const TaskManager = (props: { hidden?: boolean }) => {
       setStarted(true);
     }
 
-    if (dirty) {setDirty(false);}
-  }, [started, taskList, dirty, CancelTask]);
+    if (dirty) {
+      setDirty(false);
+    }
+  }, [started, taskList, CancelTask, dirty]);
 
   const clearAllTasks = () => {
     for (let i = taskList.length - 1; i >= 0; i--) {
       CancelTask(taskList[i].task, false);
     }
 
-    if (taskList.length === 0) return; 
+    if (taskList.length === 0) return;
     toast({
       title: "Canceling all tasks",
       description: "Clearing both the queue and all active tasks!",
       status: "info",
       duration: 2000,
       isClosable: true,
-    })
-  }
+    });
+  };
 
   return (
     <VStack
@@ -187,23 +213,24 @@ const TaskManager = (props: { hidden?: boolean }) => {
           <Task
             key={index}
             task={taskProp.task}
-            task_detail = {taskProp.task_detail}
+            task_detail={taskProp.task_detail}
             progress={taskProp.progress}
             onCancelButton={taskProp.onCancelButton}
           />
         ))}
       </VStack>
+      <LoginPrompt />
     </VStack>
   );
 };
 
-const Task = ({task, task_detail, progress, onCancelButton }: TaskProp) => {
+const Task = ({ task, task_detail, progress, onCancelButton }: TaskProp) => {
   const [showCloseBtn, setShowCloseBtn] = useState(false);
 
   const generateLabel = () => {
-    if (progress > 0) return progress.toFixed(0).toString() + "%"
-    return <Spinner size="sm" />
-  }
+    if (progress > 0) return progress.toFixed(0).toString() + "%";
+    return <Spinner size="sm" />;
+  };
 
   return (
     <Box
@@ -236,7 +263,7 @@ const Task = ({task, task_detail, progress, onCancelButton }: TaskProp) => {
       <HStack w="100%" pos="relative">
         <Center position="absolute" top="-26px" left="5px" w="50px" zIndex="2">
           <Tag variant="outline" width="100%" justifyContent="center">
-            <TagLabel  >{generateLabel()}</TagLabel>
+            <TagLabel>{generateLabel()}</TagLabel>
           </Tag>
         </Center>
         <Center>
@@ -261,6 +288,144 @@ const Task = ({task, task_detail, progress, onCancelButton }: TaskProp) => {
         </Fade>
       </Box>
     </Box>
+  );
+};
+
+const LoginPrompt = () => {
+  const [show, setShow] = useState(false);
+  const handleClick = () => setShow(!show);
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [started, setStarted] = useState(false);
+
+  const toast = useToast();
+
+  const [currTask, setCurrTask] = useState({} as PythonTask);
+  const [laterTaskLogins, setLaterTaskLogins] = useState([] as PythonTask[]);
+  const [isRunning, setIsRunning] = useState(false);
+
+  const [currHostname, setHostname] = useState("");
+
+  useEffect(() => {
+    const isEmpty = (task: PythonTask) => {
+      for (const i in task) {
+        return false;
+      }
+      return true;
+    };
+
+    setCurrTask((task) => {
+      if (isEmpty(task)) return task;
+
+      if (typeof task.getFullCommand().data !== "undefined") {
+        if (currTask.getFullCommand().data.url) {
+          const url = new URL(currTask.getFullCommand().data.url);
+          setHostname(url.hostname);
+        }
+      }
+
+      return task;
+    });
+  }, [currTask]);
+
+  useEffect(() => {
+    const run = function (message: Message, task: PythonTask) {
+      if (message.status !== "LOGIN") return;
+      setIsRunning((val) => {
+        if (val) {
+          setLaterTaskLogins((oldList) => [...oldList, task]);
+          onOpen();
+          return val;
+        } else {
+          setCurrTask(task);
+          onOpen();
+          return true;
+        }
+      });
+    };
+
+    const onAnyTaskStart = function (task: PythonTask) {
+      task.subscribeToMessage((message: Message) => run(message, task));
+    };
+
+    if (!started) {
+      taskManager.subscribeToAnyTaskStart(onAnyTaskStart);
+      setStarted(true);
+    }
+  }, [started, onOpen, isOpen, isRunning]);
+
+  const login = () => {
+    if (username.length === 0 || password.length === 0) {
+      toast({
+        title: `Login failed`,
+        description: "Please fill out both fields.",
+        status: "error",
+        duration: 2000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    currTask.send({username:username, password:password});
+    close();
+  };
+
+  const close = () => {
+    onClose();
+
+    if (laterTaskLogins.length > 0) {
+      const task = laterTaskLogins[0];
+      setCurrTask(task);
+      setLaterTaskLogins((oldList) =>
+        oldList.filter((t) => t.getID() != task.getID())
+      );
+
+      setTimeout(onOpen, 200);
+    }
+  }
+
+  return (
+    <Modal onClose={close} isOpen={isOpen} isCentered closeOnOverlayClick={false}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Login to {currHostname} ?</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <Input
+            pr="4.5rem"
+            placeholder="Enter usename"
+            onChange={(event) => {
+              setUsername(event.target.value);
+            }}
+          />
+          <InputGroup size="md">
+            <Input
+              pr="4.5rem"
+              type={show ? "text" : "password"}
+              placeholder="Enter password"
+              onChange={(event) => {
+                setPassword(event.target.value);
+              }}
+            />
+            <InputRightElement width="4.5rem">
+              <Button h="1.75rem" size="sm" onClick={handleClick}>
+                {show ? "Hide" : "Show"}
+              </Button>
+            </InputRightElement>
+          </InputGroup>
+        </ModalBody>
+        <ModalFooter>
+          <HStack spacing={4}>
+            <Button onClick={login}>Login</Button>
+            <Button onClick={close}>Cancel</Button>
+          </HStack>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 };
 

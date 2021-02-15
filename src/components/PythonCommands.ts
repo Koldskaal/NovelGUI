@@ -5,6 +5,11 @@ import { DownloadOptions } from "./ResultBox/DownloadOptionsGrid";
 
 const pythonfile = "./novel_commands.py";
 
+export interface Command {
+  command: string,
+  data: { [key: string]: any }
+}
+
 export interface Task {
   name: string;
   progress: number;
@@ -36,6 +41,8 @@ class PythonTask {
   private queueKey: string;
   private uid: string;
 
+  private isDone: boolean;
+
   private position: number;
   status: TaskStatus;
 
@@ -46,6 +53,7 @@ class PythonTask {
     this.status = TaskStatus.WAITING;
 
     this.uid = uuidv4();
+    this.isDone = false;
   }
 
   getQueuePosition(): number {
@@ -65,8 +73,8 @@ class PythonTask {
     return JSON.parse(this.command).command;
   }
 
-  getFullCommand(): JSON {
-    return JSON.parse(this.command);
+  getFullCommand(): Command {
+    return JSON.parse(this.command) as Command;
   }
 
   beginTask(): void {
@@ -82,6 +90,7 @@ class PythonTask {
     }.bind(this);
 
     const handleEnd = function () {
+      this.isDone = true;
       if (this.status === TaskStatus.RUNNING)
         this.status = TaskStatus.SUCCESS;
       this.onEndSubscribers.map((listener: () => void) => {
@@ -133,6 +142,8 @@ class PythonTask {
 
   send(message: any): void {
     if (typeof this.pyshell === "undefined") return;
+    if (this.isDone) return;
+
     this.pyshell.send(message);
   }
 

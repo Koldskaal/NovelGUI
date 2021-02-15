@@ -6,7 +6,7 @@ import {
   Box
 } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { Novel, NovelInfo, useNovelDataContext } from "../AppData";
+import { Novel, NovelInfo, useNovelDataContext, useSubscribeToUpdates } from "../AppData";
 
 function isEmpty(ob: NovelInfo) {
     for (const i in ob) {
@@ -18,12 +18,30 @@ function isEmpty(ob: NovelInfo) {
 export const NovelInfoGrid = (props: { novel: Novel; }) => {
   const data = useNovelDataContext();
   const [novelInfo, setNovelInfo] = useState({} as NovelInfo);
+  const subscribe = useSubscribeToUpdates();
+
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    if (started) return;
+
+    const updateNovelInfo = () => {
+      const url = new URL(props.novel.url);
+      if (data[props.novel.title.toLowerCase()]) {
+        const info = data[props.novel.title.toLowerCase()][url.hostname];
+        console.log(info);
+        if (!isEmpty(info)) {
+          setNovelInfo(info);
+        }
+      }
+    }
+
+    subscribe(updateNovelInfo);
+    setStarted(true);
+  },[subscribe, data, props.novel.title, props.novel.url, started])
 
   useEffect(() => {
     const url = new URL(props.novel.url);
-    console.log("aspas");
-    console.log(props.novel.title);
-    console.log(data);
     if (data[props.novel.title.toLowerCase()]) {
       const info = data[props.novel.title.toLowerCase()][url.hostname];
       console.log(info);

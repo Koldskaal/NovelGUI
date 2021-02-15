@@ -77,7 +77,7 @@ export const ResultBox = () => {
   };
 
   return (
-    <Box minWidth="100%" maxWidth="100%"  onFocus={() => console.log("FOCUSED BOX")}>
+    <Box minWidth="100%" maxWidth="100%">
       <Box>
         <TopBar
           resultState={currentState}

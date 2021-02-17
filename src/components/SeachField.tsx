@@ -92,7 +92,7 @@ export const SearchField = ({
     <Fragment>
       <form onSubmit={formSubmit} className={"searchBar"}>
         <Center>
-          <motion.div animate={{ width: inFocus ? "100%" : "50%" }}>
+          <motion.div animate={{ width: inFocus ? "100%" : "70%" }}>
             <InputGroup
               spacing="10px"
               paddingTop="20px"

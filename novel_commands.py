@@ -234,10 +234,9 @@ def get_novel_info(app: App, payload, send_progress=True, enable_login=False):
         send_message("ERROR", "No crawler was found.", data={"url": payload["url"]})
         return
     app.crawler.initialize()
-
     # Handle login later!
     if enable_login and app.can_do('login'):
-        send_message("LOGIN", "Want to login?")
+        send_message("LOGIN", "Want to login?", data=payload)
         try:
             login = json.loads(input())
             app.crawler.login(login["username"], login["password"])

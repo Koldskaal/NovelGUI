@@ -20,13 +20,13 @@ import { Novel, usePersistedState } from "../AppData";
 import { DownloadOptions, DownloadOptionsGrid } from "./DownloadOptionsGrid";
 import { NovelInfoGrid } from "./NovelInfoGrid";
 import { downloadNovel, TaskStatus } from "../PythonCommands";
+import { NovelIconBar } from "./NovelIconBar";
 
-
-
-function isNovelEmpty(ob: Novel) {
+function isNovelEmpty(ob: Record<string, unknown>) {
   for (const i in ob) {
     return false;
   }
+  
   return true;
 }
 
@@ -34,7 +34,7 @@ const NovelModal = (props: {
   novel: Novel;
   isOpen: boolean;
   onClose: () => void;
-}) => {
+}):  JSX.Element => {
   const hostname = !isNovelEmpty(props.novel)
     ? new URL(props.novel.url).hostname
     : "";
@@ -42,13 +42,16 @@ const NovelModal = (props: {
   const { isOpen, onToggle } = useDisclosure();
   const [overrides, setOverrides] = useState({} as DownloadOptions);
 
-  const [prevOptions, setPrevOptions] = usePersistedState("options", {} as DownloadOptions)
-  
-  const toast = useToast()
+  const [prevOptions, setPrevOptions] = usePersistedState(
+    "options",
+    {} as DownloadOptions
+  );
+
+  const toast = useToast();
 
   useEffect(() => {
     console.log(props.novel.title);
-  },[props.novel.title])
+  }, [props.novel.title]);
 
   const closeModal = () => {
     const options = {} as DownloadOptions;
@@ -64,15 +67,15 @@ const NovelModal = (props: {
     const task = downloadNovel(props.novel.url, overrides);
     task.subscribeToMessage((message) => {
       task.send({}); // need to ping back to get continuous updates
-    })
+    });
 
     toast({
-    title: `${props.novel.title}`,
-    description: "The novel will download shortly!",
-    status: "success",
-    duration: 2000,
-    isClosable: true
-    })
+      title: `${props.novel.title}`,
+      description: "The novel will download shortly!",
+      status: "success",
+      duration: 2000,
+      isClosable: true,
+    });
 
     task.subscribeToEnd(() => {
       console.log(task.status);
@@ -82,18 +85,19 @@ const NovelModal = (props: {
         description: "The novel finished downloading.",
         status: "success",
         duration: 2000,
-        isClosable: true
-      })
-    })
+        isClosable: true,
+      });
+    });
 
     closeModal();
-  }
+  };
 
   return (
     <Modal onClose={closeModal} isOpen={props.isOpen} isCentered>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{hostname}</ModalHeader>
+          <NovelIconBar insetInlineEnd="3.75rem" top="0.5rem" />
         <ModalCloseButton />
         <ModalBody>
           <Collapse in={!isOpen} animateOpacity>
@@ -115,7 +119,10 @@ const NovelModal = (props: {
           </Button>
 
           <Collapse in={isOpen} animateOpacity>
-            <DownloadOptionsGrid defaultOptions={prevOptions} onOptionChange={(options) => setOverrides(options)}/>
+            <DownloadOptionsGrid
+              defaultOptions={prevOptions}
+              onOptionChange={(options) => setOverrides(options)}
+            />
           </Collapse>
         </ModalBody>
         <ModalFooter>

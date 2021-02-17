@@ -23,3 +23,7 @@ div table {
 html, body, #root {
   height: 100%
 }
+
+.chakra-tabs__tab-panel:focus {
+  outline: none;
+}

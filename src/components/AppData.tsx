@@ -154,9 +154,20 @@ const usePersistedState = (key:string, defaultValue: any) => {
   return [state, setState];
 }
 
+const useSessionState = (key:string, defaultValue: any) => {
+  const [state, setState] = useState(() => {
+    const persistedState = sessionStorage.getItem(key);
+    return persistedState ? JSON.parse(persistedState) : defaultValue;
+  });
+  useEffect(() => {
+    window.sessionStorage.setItem(key, JSON.stringify(state));
+  }, [state, key]);
+  return [state, setState];
+}
+
 const getFromStorage = (key: string) => {
   return JSON.parse(localStorage.getItem(key));
-} 
+}
 
 export {
   useNovelDataContext,

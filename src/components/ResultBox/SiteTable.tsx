@@ -11,6 +11,7 @@ import {
 import React, { useState, useEffect, Fragment } from "react";
 import { Novel, useNovelDataContext } from "../AppData";
 import { getInfoPython } from "../PythonCommands";
+import { NovelIconBar } from "./NovelIconBar";
 
 const SiteTable = (props: {
   novelsites: Novel[];
@@ -56,16 +57,21 @@ const SiteTableRow = (props: {
   const [bgColor, setBGColor] = useState("base");
   const data = useNovelDataContext();
   const [isRunning, setIsRunning] = useState(false);
+  const [isHovering, setHover] = useState(false);
+  const [onButtons, setOnButtons] = useState(false);
 
   const hoverColor = () => {
     setBGColor("selected");
+    setHover(true);
   };
 
   const normalColor = () => {
     setBGColor("base");
+    setHover(false);
   };
 
   const select = () => {
+    if (onButtons) return;
     props.selected(props.novel);
   };
 
@@ -116,7 +122,18 @@ const SiteTableRow = (props: {
         width="100%"
       >
         <Td>{url.hostname}</Td>
-        <Td isNumeric>{getChapterInfo()}</Td>
+        <Td isNumeric pos="relative">
+          {getChapterInfo()}
+          {isHovering ? (
+            <NovelIconBar
+              insetInlineEnd="0"
+              top="0"
+              layerStyle={bgColor}
+              onMouseEnter={() => setOnButtons(true)}
+              onMouseLeave={() => setOnButtons(false)}
+            />
+          ) : null}
+        </Td>
       </Tr>
     </Fragment>
   );

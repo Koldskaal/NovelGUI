@@ -7,14 +7,17 @@ import {
   useDisclosure,
   Spacer
 } from "@chakra-ui/react";
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 import { SettingsModal } from "./Settings";
 import { TaskManager } from "./TaskManager";
 
 const BottomIconBar = () => {
-  const { isOpen, onToggle } = useDisclosure();
-
+  const [taskManagerIsOpen, setTaskManagerIsOpen] = useState(false);
   const [settingsIsOpen, setSettingsIsOpen] = useState(false);
+
+  const toggleTasakManager = () => {
+    setTaskManagerIsOpen(!taskManagerIsOpen);
+  }
 
   const toggleSettings = () => {
     setSettingsIsOpen(!settingsIsOpen);
@@ -32,14 +35,13 @@ const BottomIconBar = () => {
         paddingLeft="10px"
         paddingRight="10px"
       >
-        <Fade in={isOpen}></Fade>
         <Spacer />
         <Box pos="relative">
-          <TaskManager hidden={isOpen} />
+          <TaskManager isOpen={taskManagerIsOpen} onClose={toggleTasakManager} />
           <IconButton
             aria-label="Show queued tasks"
             icon={<RepeatIcon />}
-            onClick={onToggle}
+            onClick={toggleTasakManager}
             size="xs" />
           <IconButton
             aria-label="Show settings modal"

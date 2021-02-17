@@ -1,12 +1,12 @@
+import React, { Fragment, useState } from "react";
+
 import { Box, Table, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
-import React, { Fragment } from "react";
-import { useState } from "react";
 import { NovelResult } from "../AppData";
 
 const SearchResultTable = (props: {
   searchResults: NovelResult[];
   selected: (novel: NovelResult) => void;
-}) => {
+}): JSX.Element => {
   const rows = props.searchResults.map(
     (results: NovelResult, index: number) => (
       <Fragment key={index}>
@@ -42,7 +42,7 @@ const SearchResultTable = (props: {
   );
 };
 
-const SearchResultTableRow = (prop: {
+const SearchResultTableRow = (props: {
   selected: (novel: NovelResult) => void;
   results: NovelResult;
 }) => {
@@ -56,7 +56,7 @@ const SearchResultTableRow = (prop: {
   };
 
   const select = () => {
-    prop.selected(prop.results);
+    props.selected(props.results);
   };
 
   return (
@@ -71,7 +71,7 @@ const SearchResultTableRow = (prop: {
         // display="table"
         width="100%"
       >
-        <Td>{prop.results.title}</Td>
+        <Td>{props.results.title}</Td>
       </Tr>
     </Fragment>
   );

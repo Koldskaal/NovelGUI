@@ -16,7 +16,7 @@ import {
   useSearchDataContext,
 } from "../AppData";
 import { ViewManager } from "../modules/ViewManager";
-import { SearchResultTable } from "./SearchResults";
+import { SearchResultTable } from "./SearchResultTable";
 import { SiteTable } from "./SiteTable";
 import { NovelModal } from "./NovelModal";
 

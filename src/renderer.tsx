@@ -18,21 +18,14 @@ import { BottomIconBar } from "./components/BottomIconBar/BottomIconBar";
 import { Fonts } from "./fonts"
 import {NovelDataContextProvider, NovelResult} from "./components/AppData"
 import { ViewManager } from "./components/modules/ViewManager"
+import { FrontPage } from "./components/FrontPageTab";
 
 const Root = () => {
-
-
   return (
-    <VStack paddingLeft="20px" paddingRight="20px" justifyContent="center" minH="50%">
-      <NovelDataContextProvider>
-      <SearchField onSearchStart={() => ViewManager.broadcast("search", {})}/>
-      </NovelDataContextProvider>
-      <NovelDataContextProvider>
-        <ResultBox />
-      </NovelDataContextProvider>
-      <BottomIconBar />
-      
-    </VStack>
+    <Box>
+    <FrontPage />
+    <BottomIconBar />
+    </Box>
   );
 };
 const config = {

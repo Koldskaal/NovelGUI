@@ -17,6 +17,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { usePersistedState } from "../AppData";
+import { ViewManager } from "../modules/ViewManager";
 import { FolderPathInputPrompt } from "../OptionComponents";
 
 interface GeneralSettings {
@@ -36,13 +37,15 @@ const SettingsModal = (props: { isOpen: boolean; onClose: () => void }) => {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (started) {
       setPrevOptions(downloadOptions);
-    } else {
+  }, [downloadOptions, setPrevOptions]);
+
+  useEffect(() => {
+    if (!started) {
       setDownloadOptions(prevOptions);
       setStarted(true);
     }
-  }, [downloadOptions, started, prevOptions, setPrevOptions]);
+  },[prevOptions, started])
 
   const toast = useToast();
 
@@ -64,6 +67,10 @@ const SettingsModal = (props: { isOpen: boolean; onClose: () => void }) => {
               setDownloadOptions((prev) => ({ ...prev, outputPath: option }));
             }}
           />
+          <Button onClick={() => {
+            localStorage.removeItem("track");
+            ViewManager.broadcast("track", {});
+            }}>Clear tracked data!</Button>
         </ModalBody>
         <ModalFooter>
           <HStack spacing={4}>

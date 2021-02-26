@@ -6,8 +6,8 @@ import { DownloadOptions } from "./ResultBox/DownloadOptionsGrid";
 const pythonfile = "./novel_commands.py";
 
 export interface Command {
-  command: string,
-  data: { [key: string]: any }
+  command: string;
+  data: { [key: string]: any };
 }
 
 export interface Task {
@@ -27,7 +27,7 @@ export enum TaskStatus {
   CANCEL,
   ERROR,
   RUNNING,
-  WAITING
+  WAITING,
 }
 
 class PythonTask {
@@ -36,7 +36,7 @@ class PythonTask {
   private onEndSubscribers: { (): void }[] = [];
   private onMessageSubscribers: { (message: Message): void }[] = [];
   private onTaskBegin: { (): void }[] = [];
-  
+
   private command: string;
   private queueKey: string;
   private uid: string;
@@ -44,13 +44,12 @@ class PythonTask {
   private isDone: boolean;
 
   private position: number;
-  status: TaskStatus;
+  status: TaskStatus = TaskStatus.WAITING;
 
   constructor(command: string, queueKey: string) {
     this.command = command;
     this.queueKey = queueKey;
     taskManager.addToQueue(this.queueKey, this);
-    this.status = TaskStatus.WAITING;
 
     this.uid = uuidv4();
     this.isDone = false;
@@ -62,7 +61,6 @@ class PythonTask {
 
   setQueuePosition(position: number): void {
     this.position = position;
-    
   }
 
   getID(): string {
@@ -89,21 +87,20 @@ class PythonTask {
       });
     }.bind(this);
 
-    const handleEnd = function () {
+    const handleEnd = function() {
       this.isDone = true;
-      if (this.status === TaskStatus.RUNNING)
-        this.status = TaskStatus.SUCCESS;
+      if (this.status === TaskStatus.RUNNING) this.status = TaskStatus.SUCCESS;
       this.onEndSubscribers.map((listener: () => void) => {
         listener();
       });
     }.bind(this);
 
     const handleError = function () {
-      this.status = TaskStatus.ERROR
-    }.bind(this)
+      this.status = TaskStatus.ERROR;
+    }.bind(this);
 
     this.status = TaskStatus.RUNNING;
-
+    
     this.pyshell = new PythonShell(pythonfile, options);
     this.pyshell.on("message", handleMessage);
     this.pyshell.on("error", handleError);
@@ -154,6 +151,8 @@ class PythonTask {
     this.status = TaskStatus.CANCEL;
     this.pyshell.kill();
   }
+
+  
 }
 
 function removeItem(arr: any[], value: any) {
@@ -179,7 +178,6 @@ class TaskManager {
       this.allQueues[queueId] = [] as PythonTask[];
       this.runningQueue[queueId] = [] as PythonTask[];
       this.queuePositions[queueId] = 1;
-      
     }
 
     this.allQueues[queueId].push(task);
@@ -209,7 +207,7 @@ class TaskManager {
       if (this.allQueues[id].length > 0) {
         const task = this.allQueues[id].shift();
         task.beginTask();
-        task.status = TaskStatus.WAITING;
+        
         this.runningQueue[id].push(task);
         task.setQueuePosition(0);
 
@@ -280,19 +278,22 @@ function getInfoPython(url: string): PythonTask {
   return task;
 }
 
-function downloadNovel(url: string, options: DownloadOptions): PythonTask {
+function downloadNovel(url: string, title:string, options: DownloadOptions): PythonTask {
   const defOpt = getFromStorage("defaultOptions");
   const data = {
-    overridePath: options.folderPathOption.useCustomPath ? options.folderPathOption.path : "",
+    overridePath: options.folderPathOption.useCustomPath
+      ? options.folderPathOption.path
+      : "",
     rangeOption: options.rangeOption,
     outputFormats: options.outputFormats,
     openFolder: options.openFolder,
-    basePath: defOpt.outputPath
-  }
+    basePath: defOpt.outputPath,
+  };
 
   const command = {
     command: "download_novel",
     data: {
+      title: title,
       url: url,
       options: data,
     },

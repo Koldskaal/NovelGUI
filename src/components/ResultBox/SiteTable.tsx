@@ -9,8 +9,9 @@ import {
   Box,
 } from "@chakra-ui/react";
 import React, { useState, useEffect, Fragment } from "react";
-import { Novel, useNovelDataContext } from "../AppData";
-import { getInfoPython } from "../PythonCommands";
+import { getFromSession, usePersistedState, useSessionState } from "../AppData";
+import { Novel } from "../dataTypes";
+import { getInfoPython, PythonTask, taskManager } from "../PythonCommands";
 import { NovelIconBar } from "./NovelIconBar";
 
 const SiteTable = (props: {
@@ -55,7 +56,6 @@ const SiteTableRow = (props: {
   novel: Novel;
 }) => {
   const [bgColor, setBGColor] = useState("base");
-  const data = useNovelDataContext();
   const [isRunning, setIsRunning] = useState(false);
   const [isHovering, setHover] = useState(false);
   const [onButtons, setOnButtons] = useState(false);
@@ -77,34 +77,47 @@ const SiteTableRow = (props: {
 
   const url = new URL(props.novel.url);
 
+  const refreshData = () => {
+    const task = getInfoPython(props.novel.url);
+    setIsRunning(true);
+    const setRun = () => {
+      setIsRunning(false);
+      task.unsubscribeToEnd(setRun);
+    };
+    task.subscribeToEnd(setRun);
+  }
+
   useEffect(() => {
     const url = new URL(props.novel.url);
     const title = props.novel.title.toLowerCase();
-    if (!data[title] || !data[title][url.hostname]) {
+    const cache = getFromSession("cache");
+    if (!cache[title] || !cache[title][url.hostname]) {
       setIsRunning(true);
       const task = getInfoPython(url.href);
       const setRun = () => {
         setIsRunning(false);
+
       };
       task.subscribeToEnd(setRun);
 
       return () => task.unsubscribeToEnd(setRun);
     }
-  }, [props.novel, data]);
+  }, [props.novel]);
 
   const getChapterInfo = () => {
     if (isRunning) {
       return <Spinner size="sm" />;
     }
+    const cache = getFromSession("cache");
     const title = props.novel.title.toLowerCase();
-    if (!data[title]) {
+    if (!cache[title]) {
       return <div>X</div>;
     }
-    if (!data[title][url.hostname]) {
+    if (!cache[title][url.hostname]) {
       return <div>X2</div>;
     }
-    if (data[title][url.hostname].chapters) {
-      return <div>{data[title][url.hostname].chapters}</div>;
+    if (cache[title][url.hostname].chapters) {
+      return <div>{cache[title][url.hostname].chapters}</div>;
     }
     return <div>X</div>;
   };
@@ -126,11 +139,14 @@ const SiteTableRow = (props: {
           {getChapterInfo()}
           {isHovering ? (
             <NovelIconBar
+              novel={props.novel}
               insetInlineEnd="0"
               top="0"
               layerStyle={bgColor}
               onMouseEnter={() => setOnButtons(true)}
               onMouseLeave={() => setOnButtons(false)}
+              onRefreshPress={refreshData}
+              isRunning={isRunning}
             />
           ) : null}
         </Td>

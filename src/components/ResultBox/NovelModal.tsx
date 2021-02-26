@@ -16,26 +16,20 @@ import {
 } from "@chakra-ui/react";
 import { FaMinus, FaPlus } from "react-icons/fa";
 import React, { useEffect, useState } from "react";
-import { Novel, usePersistedState } from "../AppData";
+import { usePersistedState } from "../AppData";
+import { Novel } from "../dataTypes";
 import { DownloadOptions, DownloadOptionsGrid } from "./DownloadOptionsGrid";
 import { NovelInfoGrid } from "./NovelInfoGrid";
-import { downloadNovel, TaskStatus } from "../PythonCommands";
+import { downloadNovel, getInfoPython, TaskStatus } from "../PythonCommands";
 import { NovelIconBar } from "./NovelIconBar";
-
-function isNovelEmpty(ob: Record<string, unknown>) {
-  for (const i in ob) {
-    return false;
-  }
-  
-  return true;
-}
+import { isEmpty } from "../modules/helpers";
 
 const NovelModal = (props: {
   novel: Novel;
   isOpen: boolean;
   onClose: () => void;
-}):  JSX.Element => {
-  const hostname = !isNovelEmpty(props.novel)
+}): JSX.Element => {
+  const hostname = !isEmpty(props.novel)
     ? new URL(props.novel.url).hostname
     : "";
 
@@ -47,11 +41,14 @@ const NovelModal = (props: {
     {} as DownloadOptions
   );
 
+  const [isRunning, setIsRunning] = useState(false);
+
   const toast = useToast();
 
   useEffect(() => {
     console.log(props.novel.title);
-  }, [props.novel.title]);
+    console.log(prevOptions);
+  }, [prevOptions, props.novel.title]);
 
   const closeModal = () => {
     const options = {} as DownloadOptions;
@@ -64,7 +61,11 @@ const NovelModal = (props: {
   };
 
   const startDownload = () => {
-    const task = downloadNovel(props.novel.url, overrides);
+    const task = downloadNovel(
+      props.novel.url,
+      props.novel.title.toLowerCase(),
+      overrides
+    );
     task.subscribeToMessage((message) => {
       task.send({}); // need to ping back to get continuous updates
     });
@@ -78,7 +79,6 @@ const NovelModal = (props: {
     });
 
     task.subscribeToEnd(() => {
-      console.log(task.status);
       if (task.status !== TaskStatus.SUCCESS) return;
       toast({
         title: `${props.novel.title}`,
@@ -92,12 +92,28 @@ const NovelModal = (props: {
     closeModal();
   };
 
+  const refreshData = () => {
+    setIsRunning(true);
+    const task = getInfoPython(props.novel.url);
+    const setRun = () => {
+      setIsRunning(false);
+      task.unsubscribeToEnd(setRun);
+    };
+    task.subscribeToEnd(setRun);
+  };
+
   return (
     <Modal onClose={closeModal} isOpen={props.isOpen} isCentered>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{hostname}</ModalHeader>
-          <NovelIconBar insetInlineEnd="3.75rem" top="0.5rem" />
+        <NovelIconBar
+          novel={props.novel}
+          insetInlineEnd="3.75rem"
+          top="0.5rem"
+          onRefreshPress={refreshData}
+          isRunning={isRunning}
+        />
         <ModalCloseButton />
         <ModalBody>
           <Collapse in={!isOpen} animateOpacity>

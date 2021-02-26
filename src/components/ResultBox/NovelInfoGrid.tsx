@@ -1,55 +1,39 @@
-import {
-  Grid,
-  GridItem,
-  Text,
-  Image,
-  Box
-} from "@chakra-ui/react";
+import { Grid, GridItem, Text, Image, Box } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
-import { Novel, NovelInfo, useNovelDataContext, useSubscribeToUpdates } from "../AppData";
+import { getFromSession } from "../AppData";
+import { Novel, NovelInfo } from "../dataTypes";
+import { ViewManager } from "../modules/ViewManager";
+import { isEmpty } from "../modules/helpers";
 
-function isEmpty(ob: NovelInfo) {
-    for (const i in ob) {
-      return false;
-    }
-    return true;
-  }
-
-export const NovelInfoGrid = (props: { novel: Novel; }) => {
-  const data = useNovelDataContext();
+export const NovelInfoGrid = (props: { novel: Novel }) => {
   const [novelInfo, setNovelInfo] = useState({} as NovelInfo);
-  const subscribe = useSubscribeToUpdates();
-
-  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (started) return;
-
     const updateNovelInfo = () => {
+      const cache = getFromSession("cache");
       const url = new URL(props.novel.url);
-      if (data[props.novel.title.toLowerCase()]) {
-        const info = data[props.novel.title.toLowerCase()][url.hostname];
-        console.log(info);
+      if (cache[props.novel.title.toLowerCase()]) {
+        const info = cache[props.novel.title.toLowerCase()][url.hostname];
         if (!isEmpty(info)) {
           setNovelInfo(info);
         }
       }
-    }
+    };
 
-    subscribe(updateNovelInfo);
-    setStarted(true);
-  },[subscribe, data, props.novel.title, props.novel.url, started])
+    const handleCacheChange = (e: CustomEvent) => {
+      if (!e.detail.payload && e.detail.payload.key !== "cache") return;
 
-  useEffect(() => {
-    const url = new URL(props.novel.url);
-    if (data[props.novel.title.toLowerCase()]) {
-      const info = data[props.novel.title.toLowerCase()][url.hostname];
-      console.log(info);
-      if (!isEmpty(info)) {
-        setNovelInfo(info);
-      }
-    }
-  }, [props.novel.url, props.novel.title, data]);
+      // notice! it updates on any cache change even if irrelevant
+      updateNovelInfo();
+    };
+
+    updateNovelInfo();
+    ViewManager.subscribe("storage", handleCacheChange);
+
+    return function cleanup() {
+      ViewManager.unsubscribe("storage", handleCacheChange);
+    };
+  }, [props.novel.title, props.novel.url]);
 
   const author = () => {
     if (!isEmpty(novelInfo)) {
@@ -111,7 +95,8 @@ export const NovelInfoGrid = (props: { novel: Novel; }) => {
           alt="cover"
           margin="auto"
           boxSize="250px"
-          borderRadius="sm" />
+          borderRadius="sm"
+        />
       </GridItem>
       <GridItem rowSpan={1} colSpan={1}>
         <Box paddingBottom="3px">

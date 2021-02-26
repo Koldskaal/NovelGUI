@@ -5,7 +5,8 @@ import { getInfoPython, Message, searchPython, taskManager } from "./PythonComma
 import { SearchIcon } from "@chakra-ui/icons";
 import { motion } from "framer-motion";
 import { NovelModal } from "./ResultBox/NovelModal";
-import { Novel, useNovelDataContext } from "./AppData";
+import { getFromSession } from "./AppData";
+import { Novel } from "./dataTypes";
 
 type SearchProp = {
   onSearchEnd?: () => void;
@@ -24,17 +25,13 @@ export const SearchField = ({
   const [openModal, setOpenModal] = useState(false);
   const [currNovel, setCurrNovel] = useState({} as Novel);
 
-  const data = useNovelDataContext();
-
   const geteNovelDetails = function(message: Message) {
     if (message.task.name === "get_novel_info") {
       if (typeof message.data === "undefined") {
         return;
       }
-      console.log(currNovel);
       const title: string = message.data.title.toString().toLowerCase();
       setCurrNovel((novel) => ({ ...novel, title: title }));
-      
     }
   }.bind(this);
 
@@ -43,7 +40,11 @@ export const SearchField = ({
     setIsLoading(true);
 
     if (value.startsWith("http") || value.startsWith("https")) {
-      if (data[currNovel.title]) {
+      const cache = getFromSession("cache");
+      const url = new URL(value);
+      console.log(value);
+      console.log(url.href);
+      if (cache[currNovel.title]) {
         setOpenModal(true);
         setIsLoading(false);
         return;
@@ -59,6 +60,9 @@ export const SearchField = ({
         console.log("RESLUT SHOUDL BE READY");
         setIsLoading(false);
         setOpenModal(true);
+        if (onSearchEnd){
+          onSearchEnd();
+        }
       });
 
       

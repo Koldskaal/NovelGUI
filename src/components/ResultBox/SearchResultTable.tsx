@@ -1,7 +1,7 @@
-import React, { Fragment, useState } from "react";
+import React, { Fragment, useEffect, useState } from "react";
 
 import { Box, Table, Tbody, Td, Th, Thead, Tr } from "@chakra-ui/react";
-import { NovelResult } from "../AppData";
+import { NovelResult } from "../dataTypes";
 
 const SearchResultTable = (props: {
   searchResults: NovelResult[];

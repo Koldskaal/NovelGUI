@@ -1,62 +1,20 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { Message, PythonTask, taskManager } from "./PythonCommands";
+import React, { useCallback, useEffect, useState } from "react";
+import { ViewManager } from "./modules/ViewManager";
+import { CachedNovelInfo, Novel, NovelInfo, NovelTracking } from "./dataTypes";
+import { RangeOption } from "./OptionComponents";
+import { Message, PythonTask, taskManager, TaskStatus } from "./PythonCommands";
+import { v4 as uuidv4 } from "uuid";
 
-type Novel = {
-  info: string;
-  title: string;
-  url: string;
-};
-
-type NovelResult = {
-  id: string;
-  novels: Novel[];
-  title: string;
-};
-type CachedNovelInfo = {
-  [title: string]: { [url: string]: NovelInfo };
-};
-
-type NovelInfo = {
-  title: string;
-  author: string;
-  cover: string;
-  volumes: number;
-  chapters: number;
-};
-
-type callback = () => void;
-
-const NovelDataContext = createContext({ cache: {}, searchResults: [], subscribeToUpdates:(callback:callback) => {return;},});
-
-const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
-  const [searchResults, setSearchResults] = useState([] as NovelResult[]);
+const NovelDataContextProvider = () => {
   const [cache, setCache] = useState({} as CachedNovelInfo);
-  const [callbacks, setCallbacks] = useState([] as callback[]);
 
-  const [isDirty, setIsDirty] = useState(false);
-  const [started, setStarted] = useState(false);
+  const [trackState, setTrackState] = usePersistedState("track", {});
 
-  
-
-  useEffect(() => {
-    const notifyUpdate = () => {
-      callbacks.forEach((callback) => {
-        callback();
-      })
-    }
-
-    if (isDirty) {
-      notifyUpdate();
-      setIsDirty(false);
-    }
-  },[callbacks, isDirty])
+  const [searchState, setSearchState] = useSessionState("search", []);
+  const [cacheState, setCacheState] = useSessionState("cache", {});
 
   useEffect(() => {
     const onNewTask = (task: PythonTask) => {
-      if (task.getCommand() === "search") {
-        setSearchResults([] as NovelResult[]);
-      }
-
       task.subscribeToMessage((message: Message) => {
         if (message.status !== "OK") {
           console.log(message);
@@ -65,7 +23,9 @@ const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
         // sort through tasks
         if (message.task.name === "search") {
           if (typeof message.data !== "undefined") {
-            setSearchResults(message.data.novels);
+            // new version
+            setSearchState(message.data.novels);
+            ViewManager.broadcast("storage", { key: "search" });
           }
         } else if (message.task.name === "get_novel_info") {
           if (typeof message.data === "undefined") {
@@ -82,101 +42,162 @@ const NovelDataContextProvider = (props: { children?: JSX.Element }) => {
             chapters: message.data.chapters,
           } as NovelInfo;
 
-          setCache((oldCache) => {
-
-            if (!oldCache[title]){
-              oldCache[title] = {};
-              
-            }
-            oldCache[title][url] = info;
-            return oldCache;
+          if (!cacheState[title]) {
+            cacheState[title] = {};
           }
-          );
-          setIsDirty(true);
+          cacheState[title][url] = info;
+
+          setCacheState(cacheState);
+          ViewManager.broadcast("storage", {
+            key: "cache",
+            title: title,
+            url: url,
+          });
         }
       });
     };
 
-    if (!started) {
-      taskManager.subscribeToAnyTaskStart(onNewTask);
-      setStarted(true);
-    }
-  }, [cache, started]);
+    taskManager.subscribeToAnyTaskStart(onNewTask);
 
-  const addToList = (callback: callback) => {
-    setCallbacks((oldList) => [...oldList, callback]);
-  } 
+    return function cleanup() {
+      taskManager.unsubscribeToAnyTaskStart(onNewTask);
+    };
+  }, [cacheState, setCacheState, setSearchState]);
 
-  return (
-    <NovelDataContext.Provider
-      value={{ cache: cache, searchResults: searchResults, subscribeToUpdates:addToList }}
-    >
-      {props.children}
-    </NovelDataContext.Provider>
-  );
+  useEffect(() => {
+    const recordDownload = (task: PythonTask) => {
+      if (task.getFullCommand().command !== "download_novel") return;
+
+      task.subscribeToEnd(() => {
+        if (task.status !== TaskStatus.SUCCESS) return;
+
+        const command = task.getFullCommand();
+        console.log(command.data.options);
+        const rangeOption: RangeOption = command.data.options.rangeOption;
+        const hostname = new URL(command.data.url).hostname;
+        let latest = 0;
+
+        // translate rangeOptions to latest chapter!
+        if (rangeOption.radio === "1") {
+          latest = cacheState[command.data.title][hostname].chapters;
+        } else if (rangeOption.radio === "2") {
+          const chapters = rangeOption.input.match(/\d+/g).map(Number);
+          latest = Math.max(...chapters);
+        } else if (rangeOption.radio === "3") {
+          const volumes = rangeOption.input.match(/\d+/g).map(Number);
+          const biggestChapterNr = Math.max(...volumes) * 100;
+
+          const max = cacheState[command.data.title][hostname].chapters;
+
+          if (biggestChapterNr <= max) {
+            latest = biggestChapterNr;
+          } else {
+            latest = max;
+          }
+        }
+
+        // if latest is bigger than previous latest -> save
+        const trackedData = trackState;
+        const name = command.data.title + "-" + hostname;
+
+        if (!trackedData[name]) {
+          const data = {} as NovelTracking;
+          data.novel = {title: command.data.title, url:command.data.url, info:""}
+          data.isFavorite = false;
+          data.latestDownload = 0;
+          trackedData[name] = data;
+        }
+
+        if (trackedData[name].latestDownload < latest) {
+          trackedData[name].latestDownload = latest;
+        }
+
+        setTrackState(trackedData);
+      });
+    };
+
+    taskManager.subscribeToAnyTaskStart(recordDownload);
+
+    return function cleanup() {
+      taskManager.unsubscribeToAnyTaskStart(recordDownload);
+    };
+  }, [cacheState, setTrackState, trackState]);
+
+  return <div></div>;
 };
 
-const useNovelDataContext = () => {
-  const context = useContext(NovelDataContext);
-  if (context === undefined) {
-    throw new Error("Context must be used within a Provider");
-  }
-
-  return context.cache as CachedNovelInfo;
-};
-
-const useSubscribeToUpdates = () => {
-  const context = useContext(NovelDataContext);
-  if (context === undefined) {
-    throw new Error("Context must be used within a Provider");
-  }
-
-  return context.subscribeToUpdates;
-};
-
-const useSearchDataContext = () => {
-  const context = useContext(NovelDataContext);
-  if (context === undefined) {
-    throw new Error("Context must be used within a Provider");
-  }
-
-  return context.searchResults as NovelResult[];
-};
-
-const usePersistedState = (key:string, defaultValue: any) => {
+const usePersistedState = (key: string, defaultValue: any) => {
   const [state, setState] = useState(() => {
     const persistedState = localStorage.getItem(key);
     return persistedState ? JSON.parse(persistedState) : defaultValue;
   });
-  useEffect(() => {
-    window.localStorage.setItem(key, JSON.stringify(state));
-  }, [state, key]);
-  return [state, setState];
-}
 
-const useSessionState = (key:string, defaultValue: any) => {
+  const update = useCallback((newState: any) => {
+    setState(newState);
+    localStorage.setItem(key, JSON.stringify(newState));
+    ViewManager.broadcast(key, {});
+  },[key]);
+
+  useEffect(() => {
+    const event = () => {
+      setState(() => {
+        const val = localStorage.getItem(key);
+        return val ? JSON.parse(val) : defaultValue;
+      });
+    };
+
+    ViewManager.subscribe(key, event);
+    return function cleanup() {
+      ViewManager.unsubscribe(key, event);
+    };
+  }, [defaultValue, key]);
+
+  return [state, update];
+};
+
+const useSessionState = (key: string, defaultValue: any) => {
   const [state, setState] = useState(() => {
-    const persistedState = sessionStorage.getItem(key);
-    return persistedState ? JSON.parse(persistedState) : defaultValue;
+    const sessionState = sessionStorage.getItem(key) ;
+    return sessionState ? JSON.parse(sessionState) as typeof defaultValue : defaultValue;
   });
-  useEffect(() => {
-    window.sessionStorage.setItem(key, JSON.stringify(state));
-  }, [state, key]);
-  return [state, setState];
-}
 
-const getFromStorage = (key: string) => {
-  return JSON.parse(localStorage.getItem(key));
+  const update = useCallback((newState: any) => {
+    setState(newState);
+    sessionStorage.setItem(key, JSON.stringify(newState));
+    ViewManager.broadcast(key, {});
+  },[key])
+
+  useEffect(() => {
+    const event = () => {
+      setState(() => {
+        const val = sessionStorage.getItem(key);
+        return val ? JSON.parse(val) : defaultValue;
+      });
+    };
+
+    ViewManager.subscribe(key, event);
+    return function cleanup() {
+      ViewManager.unsubscribe(key, event);
+    };
+  }, [defaultValue, key]);
+
+  return [state, update];
+};
+
+const getFromStorage = (key: string, defaultValue: any = {}) => {
+  const state = sessionStorage.getItem(key);
+  return state ? JSON.parse(state) : defaultValue;
+};
+
+function getFromSession(key: string, defaultValue: any = {}) {
+  const sessionState = sessionStorage.getItem(key);
+  return sessionState ? JSON.parse(sessionState) : defaultValue;
 }
 
 export {
-  useNovelDataContext,
-  useSearchDataContext,
-  useSubscribeToUpdates,
   NovelDataContextProvider,
-  NovelResult,
-  Novel,
-  NovelInfo,
   usePersistedState,
-  getFromStorage
+  getFromStorage,
+  useSessionState,
+  getFromSession,
 };

@@ -6,19 +6,16 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { ChevronRightIcon } from "@chakra-ui/icons";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { OverflowTooltip } from "../OverflowTooltip";
 
 import { taskManager } from "../PythonCommands";
-import {
-  Novel,
-  NovelResult,
-  useSearchDataContext,
-} from "../AppData";
+import { Novel, NovelResult } from "../dataTypes";
 import { ViewManager } from "../modules/ViewManager";
 import { SearchResultTable } from "./SearchResultTable";
 import { SiteTable } from "./SiteTable";
 import { NovelModal } from "./NovelModal";
+import { useSessionState } from "../AppData";
 
 export enum ResultBoxState {
   None,
@@ -32,14 +29,19 @@ export const ResultBox = () => {
   const [novel, setNovel] = useState({} as Novel);
   const [isOpen, setIsOpen] = useState(false);
   const [currentState, setState] = useState(ResultBoxState.None);
-
-  const searchResults = useSearchDataContext();
+  const [searchResults, setSearchResults] = useSessionState("search", [] as NovelResult[]);
 
   useEffect(() => {
     const onSearch = function (event: Event) {
       setState(ResultBoxState.SelectNovel);
+    };
+
+
+    ViewManager.subscribe("search", onSearch);
+
+    return function cleanup() {
+      ViewManager.unsubscribe("search", onSearch);
     }
-    ViewManager.subscribe("search", onSearch)
   }, []);
 
   const selectedNovel = (novel: NovelResult) => {
@@ -86,7 +88,11 @@ export const ResultBox = () => {
         ></TopBar>
       </Box>
       <Box>{populateTable()}</Box>
-      <NovelModal novel={novel} isOpen={isOpen} onClose={() => setIsOpen(false)}/>
+      <NovelModal
+        novel={novel}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+      />
     </Box>
   );
 };

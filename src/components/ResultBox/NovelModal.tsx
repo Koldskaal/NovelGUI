@@ -16,17 +16,20 @@ import {
 } from "@chakra-ui/react";
 import { FaMinus, FaPlus } from "react-icons/fa";
 import React, { useEffect, useState } from "react";
-import { usePersistedState } from "../AppData";
-import { Novel } from "../dataTypes";
+import { getFromSession, usePersistedState } from "../AppData";
+import { Novel, NovelInfo } from "../dataTypes";
 import { DownloadOptions, DownloadOptionsGrid } from "./DownloadOptionsGrid";
 import { NovelInfoGrid } from "./NovelInfoGrid";
 import { downloadNovel, getInfoPython, TaskStatus } from "../PythonCommands";
-import { NovelIconBar } from "./NovelIconBar";
-import { isEmpty } from "../modules/helpers";
+import { RefreshButton } from "./NovelIconBar";
+import { isEmpty } from "../../modules/helpers";
+import { ViewManager } from "../../modules/ViewManager";
+import { RangeType } from "../OptionComponents/ChapterRangeOption";
 
 const NovelModal = (props: {
   novel: Novel;
   isOpen: boolean;
+  novelInfo?: NovelInfo;
   onClose: () => void;
 }): JSX.Element => {
   const hostname = !isEmpty(props.novel)
@@ -42,13 +45,10 @@ const NovelModal = (props: {
   );
 
   const [isRunning, setIsRunning] = useState(false);
-
+  const [canDownload, setCanDownload] = useState(false);
+  const [novelInfo, setNovelInfo] = useState({} as NovelInfo);
+  
   const toast = useToast();
-
-  useEffect(() => {
-    console.log(props.novel.title);
-    console.log(prevOptions);
-  }, [prevOptions, props.novel.title]);
 
   const closeModal = () => {
     const options = {} as DownloadOptions;
@@ -102,13 +102,78 @@ const NovelModal = (props: {
     task.subscribeToEnd(setRun);
   };
 
+  
+
+  useEffect(() => {
+    if (props.novelInfo) setNovelInfo(props.novelInfo);
+  }, [props.novelInfo]);
+
+  useEffect(() => {
+    const updateNovelInfo = () => {
+      if (!props.novel.url) return;
+      const cache = getFromSession("cache");
+      const url = new URL(props.novel.url);
+      if (cache[props.novel.title.toLowerCase()]) {
+        const info = cache[props.novel.title.toLowerCase()][url.hostname];
+        if (!isEmpty(info)) {
+          setNovelInfo(info);
+        }
+      }
+    };
+
+    const handleCacheChange = (e: CustomEvent) => {
+      if (!e.detail.payload && e.detail.payload.key !== "cache") return;
+
+      // notice! it updates on any cache change even if irrelevant
+      updateNovelInfo();
+    };
+
+    updateNovelInfo();
+    ViewManager.subscribe("storage", handleCacheChange);
+
+    return function cleanup() {
+      ViewManager.unsubscribe("storage", handleCacheChange);
+    };
+  }, [props.novel.title, props.novel.url]);
+
+  useEffect(() => {
+    
+    const validateOptions = () => {
+      if (!overrides || !overrides.rangeOption) return;
+      if (overrides.rangeOption.radio === RangeType.Chapters) {
+        const chapters = overrides.rangeOption.input.split("-").join(",").split(",").map((x) => +x);
+        const biggestCh = Math.max(
+          ...chapters
+        );
+        if (biggestCh > novelInfo.chapters) {
+          // about to find out if range is possible
+          return false;
+        }
+      }
+      else if (overrides.rangeOption.radio === RangeType.Volumes)
+      {
+        const volumes = overrides.rangeOption.input.split("-").join(",").split(",").map((x) => +x);
+        const biggestVol = Math.max(
+          ...volumes
+        );
+
+        if (biggestVol * 100 > novelInfo.chapters){
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    setCanDownload(validateOptions());
+  },[novelInfo.chapters, overrides]);
+
   return (
     <Modal onClose={closeModal} isOpen={props.isOpen} isCentered>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>{hostname}</ModalHeader>
-        <NovelIconBar
-          novel={props.novel}
+        <RefreshButton
           insetInlineEnd="3.75rem"
           top="0.5rem"
           onRefreshPress={refreshData}
@@ -117,7 +182,13 @@ const NovelModal = (props: {
         <ModalCloseButton />
         <ModalBody>
           <Collapse in={!isOpen} animateOpacity>
-            <NovelInfoGrid novel={props.novel} />
+            <NovelInfoGrid
+              author={novelInfo.author}
+              title={novelInfo.title}
+              cover={novelInfo.cover}
+              chapters={novelInfo.chapters}
+              volumes={novelInfo.volumes}
+            />
           </Collapse>
 
           <Button
@@ -143,7 +214,9 @@ const NovelModal = (props: {
         </ModalBody>
         <ModalFooter>
           <HStack spacing={4}>
-            <Button onClick={startDownload}>Download</Button>
+            <Button isDisabled={!canDownload} onClick={startDownload}>
+              Download
+            </Button>
             <Button onClick={closeModal}>Close</Button>
           </HStack>
         </ModalFooter>

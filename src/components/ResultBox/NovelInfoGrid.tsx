@@ -2,70 +2,41 @@ import { Grid, GridItem, Text, Image, Box } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { getFromSession } from "../AppData";
 import { Novel, NovelInfo } from "../dataTypes";
-import { ViewManager } from "../modules/ViewManager";
-import { isEmpty } from "../modules/helpers";
+import { ViewManager } from "../../modules/ViewManager";
+import { isEmpty } from "../../modules/helpers";
 
-export const NovelInfoGrid = (props: { novel: Novel }) => {
-  const [novelInfo, setNovelInfo] = useState({} as NovelInfo);
-
-  useEffect(() => {
-    const updateNovelInfo = () => {
-      const cache = getFromSession("cache");
-      const url = new URL(props.novel.url);
-      if (cache[props.novel.title.toLowerCase()]) {
-        const info = cache[props.novel.title.toLowerCase()][url.hostname];
-        if (!isEmpty(info)) {
-          setNovelInfo(info);
-        }
-      }
-    };
-
-    const handleCacheChange = (e: CustomEvent) => {
-      if (!e.detail.payload && e.detail.payload.key !== "cache") return;
-
-      // notice! it updates on any cache change even if irrelevant
-      updateNovelInfo();
-    };
-
-    updateNovelInfo();
-    ViewManager.subscribe("storage", handleCacheChange);
-
-    return function cleanup() {
-      ViewManager.unsubscribe("storage", handleCacheChange);
-    };
-  }, [props.novel.title, props.novel.url]);
-
-  const author = () => {
-    if (!isEmpty(novelInfo)) {
-      return novelInfo.author;
+export const NovelInfoGrid = ({title, author, cover, volumes, chapters}: NovelInfo) => {
+  const getAuthor = () => {
+    if (author) {
+      return author;
     }
     return "X";
   };
 
-  const title = () => {
-    if (!isEmpty(novelInfo)) {
-      return novelInfo.title;
+  const getTitle = () => {
+    if (title) {
+      return title;
     }
     return "X";
   };
 
   const coverLink = () => {
-    if (!isEmpty(novelInfo)) {
-      return novelInfo.cover;
+    if (cover) {
+      return cover;
     }
     return "X";
   };
 
-  const chapters = () => {
-    if (!isEmpty(novelInfo)) {
-      return novelInfo.chapters;
+  const getChapters = () => {
+    if (chapters) {
+      return chapters;
     }
     return "X";
   };
 
-  const volumes = () => {
-    if (!isEmpty(novelInfo)) {
-      return novelInfo.volumes;
+  const getVolumes = () => {
+    if (volumes) {
+      return volumes;
     }
     return "X";
   };
@@ -85,7 +56,7 @@ export const NovelInfoGrid = (props: { novel: Novel }) => {
           paddingRight="8px"
         >
           <Text fontSize="14px" isTruncated>
-            {title()}
+            {getTitle()}
           </Text>
         </Box>
       </GridItem>
@@ -111,7 +82,7 @@ export const NovelInfoGrid = (props: { novel: Novel }) => {
           paddingRight="8px"
         >
           <Text fontSize="14px" isTruncated>
-            {author()}
+            {getAuthor()}
           </Text>
         </Box>
       </GridItem>
@@ -128,7 +99,7 @@ export const NovelInfoGrid = (props: { novel: Novel }) => {
           paddingRight="8px"
         >
           <Text fontSize="14px" isTruncated>
-            {chapters()}
+            {getChapters()}
           </Text>
         </Box>
       </GridItem>
@@ -145,7 +116,7 @@ export const NovelInfoGrid = (props: { novel: Novel }) => {
           paddingRight="8px"
         >
           <Text fontSize="14px" isTruncated>
-            {volumes()}
+            {getVolumes()}
           </Text>
         </Box>
       </GridItem>

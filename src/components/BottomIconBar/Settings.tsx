@@ -13,12 +13,17 @@ import {
   ModalOverlay,
   useDisclosure,
   useToast,
+  Grid,
+  Box,
+  VStack,
 } from "@chakra-ui/react";
+import { read } from "fs";
 import React, { useEffect, useState } from "react";
 import { FaPlus, FaMinus } from "react-icons/fa";
 import { usePersistedState } from "../AppData";
-import { ViewManager } from "../modules/ViewManager";
+import { ViewManager } from "../../modules/ViewManager";
 import { FolderPathInputPrompt } from "../OptionComponents";
+import { getMetaPaths, readMetaFiles } from "../../modules/scanFolders";
 
 interface GeneralSettings {
   outputPath: string;
@@ -37,7 +42,8 @@ const SettingsModal = (props: { isOpen: boolean; onClose: () => void }) => {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-      setPrevOptions(downloadOptions);
+    console.log(downloadOptions);
+    setPrevOptions(downloadOptions);
   }, [downloadOptions, setPrevOptions]);
 
   useEffect(() => {
@@ -45,7 +51,7 @@ const SettingsModal = (props: { isOpen: boolean; onClose: () => void }) => {
       setDownloadOptions(prevOptions);
       setStarted(true);
     }
-  },[prevOptions, started])
+  }, [prevOptions, started]);
 
   const toast = useToast();
 
@@ -60,17 +66,36 @@ const SettingsModal = (props: { isOpen: boolean; onClose: () => void }) => {
         <ModalHeader>Settings</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <Text>Default output folder</Text>
-          <FolderPathInputPrompt
-            defaultValue={prevOptions.outputPath}
-            onChange={(option) => {
-              setDownloadOptions((prev) => ({ ...prev, outputPath: option }));
-            }}
-          />
-          <Button onClick={() => {
-            localStorage.removeItem("track");
-            ViewManager.broadcast("track", {});
-            }}>Clear tracked data!</Button>
+          <VStack spacing={4}>
+            <Box>
+              <Text>Default output folder</Text>
+              <FolderPathInputPrompt
+                defaultValue={prevOptions.outputPath}
+                onChange={(option) => {
+                  setDownloadOptions((prev) => ({
+                    ...prev,
+                    outputPath: option,
+                  }));
+                }}
+              />
+            </Box>
+            <Button
+              onClick={() => {
+                localStorage.removeItem("track");
+                ViewManager.broadcast("track", {});
+              }}
+            >
+              Clear tracked data!
+            </Button>
+            <Button
+              // onClick={() =>
+              //   getMetaPaths(prevOptions.outputPath).then(files => {
+              //     console.log(files);
+              //   })}
+            >
+              Scan Folder
+            </Button>
+          </VStack>
         </ModalBody>
         <ModalFooter>
           <HStack spacing={4}>

@@ -1,13 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ViewManager } from "./modules/ViewManager";
-import { CachedNovelInfo, Novel, NovelInfo, NovelTracking } from "./dataTypes";
+import { ViewManager } from "../modules/ViewManager";
+import { Novel, NovelInfo, NovelTracking } from "./dataTypes";
 import { RangeOption } from "./OptionComponents";
 import { Message, PythonTask, taskManager, TaskStatus } from "./PythonCommands";
-import { v4 as uuidv4 } from "uuid";
 
 const NovelDataContextProvider = () => {
-  const [cache, setCache] = useState({} as CachedNovelInfo);
-
   const [trackState, setTrackState] = usePersistedState("track", {});
 
   const [searchState, setSearchState] = useSessionState("search", []);
@@ -25,7 +22,6 @@ const NovelDataContextProvider = () => {
           if (typeof message.data !== "undefined") {
             // new version
             setSearchState(message.data.novels);
-            ViewManager.broadcast("storage", { key: "search" });
           }
         } else if (message.task.name === "get_novel_info") {
           if (typeof message.data === "undefined") {
@@ -48,11 +44,6 @@ const NovelDataContextProvider = () => {
           cacheState[title][url] = info;
 
           setCacheState(cacheState);
-          ViewManager.broadcast("storage", {
-            key: "cache",
-            title: title,
-            url: url,
-          });
         }
       });
     };
@@ -102,7 +93,7 @@ const NovelDataContextProvider = () => {
 
         if (!trackedData[name]) {
           const data = {} as NovelTracking;
-          data.novel = {title: command.data.title, url:command.data.url, info:""}
+          data.novel = {title: command.data.title, url:command.data.url} as Novel
           data.isFavorite = false;
           data.latestDownload = 0;
           trackedData[name] = data;
@@ -134,8 +125,12 @@ const usePersistedState = (key: string, defaultValue: any) => {
 
   const update = useCallback((newState: any) => {
     setState(newState);
+    console.log(newState);
     localStorage.setItem(key, JSON.stringify(newState));
-    ViewManager.broadcast(key, {});
+    ViewManager.broadcast("storage-" + key, {});
+    ViewManager.broadcast("storage", {
+      key: key,
+    });
   },[key]);
 
   useEffect(() => {
@@ -146,9 +141,9 @@ const usePersistedState = (key: string, defaultValue: any) => {
       });
     };
 
-    ViewManager.subscribe(key, event);
+    ViewManager.subscribe("storage-" + key, event);
     return function cleanup() {
-      ViewManager.unsubscribe(key, event);
+      ViewManager.unsubscribe("storage-" + key, event);
     };
   }, [defaultValue, key]);
 
@@ -164,7 +159,10 @@ const useSessionState = (key: string, defaultValue: any) => {
   const update = useCallback((newState: any) => {
     setState(newState);
     sessionStorage.setItem(key, JSON.stringify(newState));
-    ViewManager.broadcast(key, {});
+    ViewManager.broadcast("session-" + key, {});
+    ViewManager.broadcast("storage", {
+      key: key,
+    });
   },[key])
 
   useEffect(() => {
@@ -175,9 +173,9 @@ const useSessionState = (key: string, defaultValue: any) => {
       });
     };
 
-    ViewManager.subscribe(key, event);
+    ViewManager.subscribe("session-" + key, event);
     return function cleanup() {
-      ViewManager.unsubscribe(key, event);
+      ViewManager.unsubscribe("session-" + key, event);
     };
   }, [defaultValue, key]);
 
@@ -185,7 +183,7 @@ const useSessionState = (key: string, defaultValue: any) => {
 };
 
 const getFromStorage = (key: string, defaultValue: any = {}) => {
-  const state = sessionStorage.getItem(key);
+  const state = localStorage.getItem(key);
   return state ? JSON.parse(state) : defaultValue;
 };
 

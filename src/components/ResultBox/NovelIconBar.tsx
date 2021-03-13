@@ -1,41 +1,24 @@
 import { HStack, IconButton } from "@chakra-ui/react";
 import React, { useEffect, useState } from "react";
 import { BellIcon, SpinnerIcon, StarIcon } from "@chakra-ui/icons";
-import { getFromSession, getFromStorage, usePersistedState } from "../AppData";
-import { Novel, NovelTracking } from "../dataTypes";
-import { isEmpty } from "../modules/helpers";
-import { getInfoPython, PythonTask } from "../PythonCommands";
-import { useTrackObject } from "../tracking";
 
-export const NovelIconBar = (props: {
-  novel: Novel;
-  insetInlineEnd: string;
+
+export const RefreshButton = (props: {
   top: string;
+  insetInlineEnd?: string;
   layerStyle?: string;
-  onMouseEnter?: (event: React.MouseEvent<HTMLTableRowElement, MouseEvent>) => void;
-  onMouseLeave?: (event: React.MouseEvent<HTMLTableRowElement, MouseEvent>) => void;
-  onFavoritePress?: () => void;
+  onMouseEnter?: (
+    event: React.MouseEvent<HTMLTableRowElement, MouseEvent>
+  ) => void;
+  onMouseLeave?: (
+    event: React.MouseEvent<HTMLTableRowElement, MouseEvent>
+  ) => void;
   onRefreshPress?: () => void;
   isRunning?: boolean;
 }): JSX.Element => {
-  const [state, {setFav}] = useTrackObject(props.novel);
-
-  const [isFav, setIsFav] = useState(false);
-
-  const toggleFavorite = () => {
-    setFav(!isFav);
-    if (props.onFavoritePress) props.onFavoritePress();
-  }
-
   const refresh = () => {
     props.onRefreshPress();
-  }
-
-
-  useEffect(() => {
-    setIsFav(state.isFavorite);
-  },[props.novel, state])
-
+  };
 
   return (
     <HStack
@@ -57,15 +40,6 @@ export const NovelIconBar = (props: {
         minW="1rem"
         background="none"
         onClick={refresh}
-      />
-      <IconButton
-        aria-label="Favorite"
-        w={8}
-        h={8}
-        icon={isFav ? <StarIcon /> : <BellIcon />}
-        minW="1rem"
-        background="none"
-        onClick={toggleFavorite}
       />
     </HStack>
   );

@@ -1,4 +1,5 @@
 import { app, BrowserWindow } from 'electron';
+import { protocol } from 'electron'
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: any;
 
@@ -16,7 +17,9 @@ const createWindow = (): void => {
     width: 800,
     webPreferences: {
       nodeIntegration: true,
+      nodeIntegrationInWorker: true,
       enableRemoteModule: true,
+      webSecurity: false,
   },
   });
 
@@ -51,3 +54,18 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
+app.on('ready', async () => {
+  // Name the protocol whatever you want
+  const protocolName = 'safe-file-protocol'
+
+  protocol.registerFileProtocol(protocolName, (request, callback) => {
+    const url = request.url.replace(`${protocolName}://`, '')
+    try {
+      return callback(decodeURIComponent(url))
+    }
+    catch (error) {
+      // Handle the error as needed
+      console.error(error)
+    }
+  })

@@ -29,6 +29,11 @@ const ChapterRangeOption = (props: {
   const [rangeOption, setRangeOption] = useState({} as RangeOption);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  const validateInput = (input: string) => {
+    console.log(input.replace(/[^0-9,-]/g, ""));
+    return input.replace(/[^0-9,-]/g, "");
+  }
+
   useEffect(() => {
     if (hasLoaded)
       return;
@@ -76,16 +81,18 @@ const ChapterRangeOption = (props: {
           <Radio value="2">Chapters</Radio>
           <Collapse in={value === "2"} animateOpacity>
             <Input
+              value={chaValue}
               size="xs"
               placeholder="For example 1,5-12"
-              onChange={(v) => setChaValue(v.target.value)} />
+              onChange={(v) => setChaValue(validateInput(v.target.value))} />
           </Collapse>
           <Radio value="3">Volumes</Radio>
           <Collapse in={value === "3"} animateOpacity>
             <Input
+              value={volValue}
               size="xs"
               placeholder="For example 1,5-12"
-              onChange={(v) => setVolValue(v.target.value)} />
+              onChange={(v) => setVolValue(validateInput(v.target.value))} />
           </Collapse>
         </Stack>
       </RadioGroup>
@@ -93,4 +100,4 @@ const ChapterRangeOption = (props: {
   );
 };
 
-export { ChapterRangeOption, RangeOption }
+export { ChapterRangeOption, RangeOption, RangeType }

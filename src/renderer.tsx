@@ -5,20 +5,21 @@ import {
   Box,
   extendTheme,
   ChakraProvider,
+  ThemeConfig,
 } from "@chakra-ui/react";
 import { BottomIconBar } from "./components/BottomIconBar";
 import { Fonts } from "./fonts";
 import { NovelDataContextProvider } from "./components/AppData";
 import { FrontPage } from "./components/FrontPageTab";
-import { PythonShell } from "python-shell";
+import theme from "./theme";
 
-const options = {
-  pythonOptions: ['-u'], // get print results in real-time
-  args: ["lightnovel-crawler"]
-};
-const pyshell = new PythonShell("./installer.py", options);
+// const options = {
+//   pythonOptions: ['-u'], // get print results in real-time
+//   args: ["lightnovel-crawler"]
+// };
+// const pyshell = new PythonShell("./installer.py", options);
 
-pyshell.on("message", (m) => {console.log(m)});
+// pyshell.on("message", (m) => {console.log(m)});
 
 const Root = () => {
   
@@ -30,38 +31,11 @@ const Root = () => {
     </Box>
   );
 };
-const config = {
-  useSystemColorMode: false,
-  initialColorMode: "dark",
-};
-// 3. extend the theme
-const customTheme = extendTheme({
-  config,
-  layerStyles: {
-    justbg: {
-      bg: "gray.800",
-    },
-    base: {
-      bg: "gray.800",
-      color: "gray.50",
-    },
-    selected: {
-      bg: "gray.900",
-      color: "white",
-    },
-    fonts: {
-      heading: "Open Sans",
-      body: "Raleway",
-    },
-    border: {
-      border: "1px solid",
-      borderColor: "gray.500",
-    },
-  },
-});
+
+
 
 ReactDOM.render(
-  <ChakraProvider theme={customTheme}>
+  <ChakraProvider  theme={theme}>
     <Root />
   </ChakraProvider>,
   document.getElementById("root")

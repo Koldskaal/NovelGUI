@@ -11,7 +11,7 @@ import { OverflowTooltip } from "../OverflowTooltip";
 
 import { taskManager } from "../PythonCommands";
 import { Novel, NovelResult } from "../dataTypes";
-import { ViewManager } from "../modules/ViewManager";
+import { ViewManager } from "../../modules/ViewManager";
 import { SearchResultTable } from "./SearchResultTable";
 import { SiteTable } from "./SiteTable";
 import { NovelModal } from "./NovelModal";

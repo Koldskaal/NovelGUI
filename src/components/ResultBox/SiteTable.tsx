@@ -12,7 +12,7 @@ import React, { useState, useEffect, Fragment } from "react";
 import { getFromSession, usePersistedState, useSessionState } from "../AppData";
 import { Novel } from "../dataTypes";
 import { getInfoPython, PythonTask, taskManager } from "../PythonCommands";
-import { NovelIconBar } from "./NovelIconBar";
+import { RefreshButton } from "./NovelIconBar";
 
 const SiteTable = (props: {
   novelsites: Novel[];
@@ -138,8 +138,7 @@ const SiteTableRow = (props: {
         <Td isNumeric pos="relative">
           {getChapterInfo()}
           {isHovering ? (
-            <NovelIconBar
-              novel={props.novel}
+            <RefreshButton
               insetInlineEnd="0"
               top="0"
               layerStyle={bgColor}

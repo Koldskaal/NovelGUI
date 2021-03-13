@@ -1,4 +1,8 @@
 module.exports = [
+  {
+    test: /\.worker\.ts$/,
+    use: { loader: "worker-loader" },
+  },
   // Add support for native node modules
   {
     test: /\.node$/,
@@ -23,5 +27,6 @@ module.exports = [
         transpileOnly: true
       }
     }
-  }
+  },
+  
 ]
